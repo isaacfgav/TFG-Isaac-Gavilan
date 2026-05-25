@@ -5,7 +5,7 @@
 # ==============================================================================
 # Cargamos las rutas necesarias 
 setwd("D:/DOCENCIA/CURS/TFG Alumnos/2025-2026/Q2/ISAAC FERNANDEZ/TFG-Isaac-Gavilan/syntax/")
-source(file = paste0(SYNTAXDIR, "00_InicioProyecto.R"))
+source(file = "00_InicioProyecto.R")
 
 # Cargamos las funciones necesarias 
 source(file = paste0(SYNTAXDIR, "99_funciones.R"))
@@ -45,11 +45,8 @@ model <- train(k3~., data=dataset$train,
                                       number=10, 
                                       classProbs = TRUE))
 
-tablaResultados <- data.frame(model$results)
-
-ggplot(tablaResultados, aes(x = "mtry", y = "Accuracy")) +
-         geom_line() +
-         geom_point()
+# Guardamos el modelo
+saveRDS(model, file = paste0(OUTPUTDIR, "modelRandomForest.RDS"))
 
 pred <- predict(model, newdata = dataset$test)
 

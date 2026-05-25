@@ -1,17 +1,24 @@
 # ==============================================================================
-# [TFG]   01_DataAugmentation.R
-#
-# Este script permite generar la base de datos por la cuál vamos a realizar todo
-# el proyecto. 
+# [TFG]  01_DataAugmentation.R
+# 
+# Autor(s)   : (c) Isaac Fernández, XX.XX.XXXX
+# Revisio    :     -
+# Descripcio : Este script permite generar la base de datos por la cuál vamos a 
+# realizar todo el proyecto.
 # ==============================================================================
-
+{script <- paste('[TFG]  01_DataAugmentation.R')
+cat(script, '\n', rep('=', nchar(script)), '\n', sep = '')
+start.time <- Sys.time()
+cat('Inici:', format(start.time, '%d.%m.%Y %H:%M'), '\n')}
+# ==============================================================================
 # Cargamos las rutas necesarias 
-setwd("D:/DOCENCIA/CURS/TFG Alumnos/2025-2026/Q2/ISAAC FERNANDEZ/TFG-Isaac-Gavilan/syntax/")
-source(file = paste0(SYNTAXDIR, "00_InicioProyecto.R"))
+ruta <- "D:/DOCENCIA/CURS/TFG Alumnos/2025-2026/Q2/ISAAC FERNANDEZ/TFG-Isaac-Gavilan/syntax/"
+setwd(ruta); source(file = paste0(SYNTAXDIR, "00_InicioProyecto.R"))
 
 # Cargamos las funciones necesarias 
 source(file = paste0(SYNTAXDIR, "99_funciones.R"))
 
+# ==============================================================================
 # Cargamos los paquetes necesarios 
 
 paquetes <- c("readxl", "janitor", "dplyr", "stringr", "simstudy", "writexl")
@@ -24,7 +31,7 @@ if (length(new.packages) > 0) {
 invisible(lapply(paquetes, require, character.only = TRUE))
 rm(paquetes, new.packages)
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Cargamos la base de datos 
 ## Llegim la base i netegem noms de columnes
 injuries <- read_excel("BBDD_INJURIES_v1.xlsx") %>%
