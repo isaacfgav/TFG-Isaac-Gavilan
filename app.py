@@ -21,8 +21,8 @@ st.set_page_config(
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
-R_SCRIPT = PROJECT_ROOT / "06_Predict_XGBoost.R"
-MODEL_PATH = PROJECT_ROOT / "modeloXGBoost.RDS"
+R_SCRIPT = PROJECT_ROOT / "syntax" / "06_Predict_XGBoost.R"
+MODEL_PATH = PROJECT_ROOT / "output" / "modeloXGBoost.RDS"
 
 # ------------------------------------------------------------------------------
 # Títol principal
