@@ -29,24 +29,25 @@ st.set_page_config(
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
-# Ruta de Rscript. En local pots canviar-la si cal:
-# Exemple Windows:
-# RSCRIPT = "C:/Program Files/R/R-4.4.1/bin/Rscript.exe"
+# Ruta de Rscript.
+# En Streamlit Cloud normalment funciona amb "Rscript".
+# En local, si cal, pots definir la variable d'entorn RSCRIPT_PATH.
 RSCRIPT = os.environ.get("RSCRIPT_PATH", "Rscript")
 
-# Busquem el model en possibles ubicacions
+# Ruta del model
 MODEL_CANDIDATES = [
     PROJECT_ROOT / "output" / "modeloXGBoost.RDS",
     PROJECT_ROOT / "modeloXGBoost.RDS",
 ]
 
 MODEL_PATH = None
+
 for candidate in MODEL_CANDIDATES:
     if candidate.exists():
         MODEL_PATH = candidate
         break
 
-# Possible fitxer de dades original per obtenir rangs/valors per defecte
+# Ruta de dades originals, només per agafar rangs i valors per defecte
 DATA_CANDIDATES = [
     PROJECT_ROOT / "data" / "datos_cluster.RDS",
     PROJECT_ROOT / "input" / "datos_cluster.RDS",
@@ -54,6 +55,7 @@ DATA_CANDIDATES = [
 ]
 
 DATA_PATH = None
+
 for candidate in DATA_CANDIDATES:
     if candidate.exists():
         DATA_PATH = candidate
@@ -83,22 +85,6 @@ st.markdown(
         background-color: #FAFAFA;
         margin-top: 1rem;
     }
-    .ok-box {
-        padding: 0.8rem;
-        border-radius: 0.6rem;
-        background-color: #ECFDF3;
-        border: 1px solid #ABEFC6;
-        color: #067647;
-        margin-bottom: 0.8rem;
-    }
-    .warn-box {
-        padding: 0.8rem;
-        border-radius: 0.6rem;
-        background-color: #FFF8E6;
-        border: 1px solid #FEDF89;
-        color: #93370D;
-        margin-bottom: 0.8rem;
-    }
     </style>
     """,
     unsafe_allow_html=True
@@ -106,12 +92,12 @@ st.markdown(
 
 
 # ==============================================================================
-# Funcions auxiliars
+# Funcions auxiliars Python
 
 def llegir_csv_robust(uploaded_file):
     """
     Llegeix CSV provant diferents separadors i codificacions.
-    Això evita errors típics amb CSV exportats des d'Excel.
+    Evita errors típics amb CSV exportats des d'Excel.
     """
 
     intents = [
@@ -132,7 +118,6 @@ def llegir_csv_robust(uploaded_file):
             uploaded_file.seek(0)
             df = pd.read_csv(uploaded_file, **params)
 
-            # Evitem acceptar fitxers mal llegits amb una única columna gegant
             if df.shape[1] > 1:
                 return df
 
@@ -140,8 +125,8 @@ def llegir_csv_robust(uploaded_file):
             ultim_error = e
 
     raise ValueError(
-        "No s'ha pogut llegir el CSV. Revisa que sigui un CSV real, "
-        "que no sigui un Excel, i que les columnes estiguin separades correctament."
+        "No s'ha pogut llegir el CSV. Revisa que sigui un fitxer CSV real, "
+        "no un Excel ni un RDS, i que les columnes estiguin separades correctament."
     ) from ultim_error
 
 
@@ -191,14 +176,6 @@ def format_opcio(nom_variable, valor):
         if valor_str == "1":
             return "Sí"
 
-    if nom_variable == "lesiones_previas":
-        return valor_str
-
-    if valor_str == "0":
-        return "0"
-    if valor_str == "1":
-        return "1"
-
     return valor_str
 
 
@@ -222,12 +199,15 @@ def descripcio_cluster(cluster):
         ),
     }
 
-    return descripcions.get(str(cluster), "No hi ha descripció disponible per a aquest clúster.")
+    return descripcions.get(
+        str(cluster),
+        "No hi ha descripció disponible per a aquest clúster."
+    )
 
 
 def executar_r(script_text, args):
     """
-    Executa codi R temporal amb Rscript.
+    Executa un script R temporal amb Rscript.
     """
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -249,7 +229,7 @@ def executar_r(script_text, args):
 
 
 # ==============================================================================
-# Codi R per extreure metadades del model
+# Codi R: metadades del model
 
 R_METADATA_CODE = textwrap.dedent(
     r"""
@@ -268,17 +248,36 @@ R_METADATA_CODE = textwrap.dedent(
       data_path <- ""
     }
 
+    # --------------------------------------------------------------------------
+    # Llibreria local de R per evitar errors de permisos a Streamlit Cloud
+
+    local_lib <- file.path(getwd(), "r_packages")
+
+    if (!dir.exists(local_lib)) {
+      dir.create(local_lib, recursive = TRUE)
+    }
+
+    .libPaths(c(local_lib, .libPaths()))
+
     paquets <- c("jsonlite", "caret", "xgboost")
 
     for (pkg in paquets) {
       if (!requireNamespace(pkg, quietly = TRUE)) {
-        install.packages(pkg, repos = "https://cloud.r-project.org")
+        install.packages(
+          pkg,
+          lib = local_lib,
+          repos = "https://cloud.r-project.org",
+          dependencies = TRUE
+        )
       }
     }
 
     library(jsonlite)
     library(caret)
     library(xgboost)
+
+    # --------------------------------------------------------------------------
+    # Carreguem model
 
     modelo_xgboost <- readRDS(model_path)
 
@@ -317,7 +316,9 @@ R_METADATA_CODE = textwrap.dedent(
       meta[[length(meta) + 1]] <- item
     }
 
-    # Intentem obtenir rangs i medianes del dataset original, si existeix
+    # --------------------------------------------------------------------------
+    # Intentem obtenir rangs i medianes del dataset original
+
     if (!is.null(data_path) && file.exists(data_path)) {
 
       dades <- readRDS(data_path)
@@ -372,7 +373,7 @@ R_METADATA_CODE = textwrap.dedent(
 @st.cache_data(show_spinner=False)
 def obtenir_metadata_model(model_path_str, data_path_str):
     """
-    Extreu del model les variables originals que necessita l'enquesta.
+    Extreu automàticament les variables originals que necessita el model.
     """
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -387,7 +388,10 @@ def obtenir_metadata_model(model_path_str, data_path_str):
         result = executar_r(R_METADATA_CODE, args)
 
         if result.returncode != 0:
-            raise RuntimeError(result.stderr)
+            missatge = result.stderr
+            if result.stdout:
+                missatge += "\n\nSortida R:\n" + result.stdout
+            raise RuntimeError(missatge)
 
         with open(output_json, "r", encoding="utf-8") as f:
             metadata = json.load(f)
@@ -396,7 +400,7 @@ def obtenir_metadata_model(model_path_str, data_path_str):
 
 
 # ==============================================================================
-# Codi R per fer la predicció
+# Codi R: predicció
 
 R_PREDICT_CODE = textwrap.dedent(
     r"""
@@ -410,16 +414,35 @@ R_PREDICT_CODE = textwrap.dedent(
     output_csv <- args[2]
     model_path <- args[3]
 
+    # --------------------------------------------------------------------------
+    # Llibreria local de R per evitar errors de permisos a Streamlit Cloud
+
+    local_lib <- file.path(getwd(), "r_packages")
+
+    if (!dir.exists(local_lib)) {
+      dir.create(local_lib, recursive = TRUE)
+    }
+
+    .libPaths(c(local_lib, .libPaths()))
+
     paquets <- c("caret", "xgboost")
 
     for (pkg in paquets) {
       if (!requireNamespace(pkg, quietly = TRUE)) {
-        install.packages(pkg, repos = "https://cloud.r-project.org")
+        install.packages(
+          pkg,
+          lib = local_lib,
+          repos = "https://cloud.r-project.org",
+          dependencies = TRUE
+        )
       }
     }
 
     library(caret)
     library(xgboost)
+
+    # --------------------------------------------------------------------------
+    # Carreguem model
 
     modelo_xgboost <- readRDS(model_path)
 
@@ -439,6 +462,9 @@ R_PREDICT_CODE = textwrap.dedent(
     }
 
     lvls <- dummy_model$lvls
+
+    # --------------------------------------------------------------------------
+    # Llegim dades d'entrada
 
     newdata_original <- read.csv(
       input_csv,
@@ -460,7 +486,9 @@ R_PREDICT_CODE = textwrap.dedent(
 
     newdata <- newdata_original[, vars_raw, drop = FALSE]
 
-    # Convertim tipus segons el que espera dummy_model
+    # --------------------------------------------------------------------------
+    # Convertim tipus segons el dummy_model
+
     for (v in vars_raw) {
 
       if (!is.null(lvls) && !is.null(lvls[[v]])) {
@@ -469,8 +497,6 @@ R_PREDICT_CODE = textwrap.dedent(
         valors <- as.character(newdata[[v]])
 
         valors[valors == ""] <- NA
-
-        # Arreglem casos tipus 0.0 quan els nivells són 0/1
         valors <- gsub("\\.0$", "", valors)
 
         valors_no_valids <- setdiff(unique(na.omit(valors)), nivells_v)
@@ -508,12 +534,14 @@ R_PREDICT_CODE = textwrap.dedent(
       }
     }
 
+    # --------------------------------------------------------------------------
+    # Transformació dummy
+
     x_new <- predict(dummy_model, newdata = newdata)
     x_new <- as.data.frame(x_new)
 
     names(x_new) <- make.names(names(x_new), unique = TRUE)
 
-    # Si falta alguna columna dummy, la creem amb 0
     vars_falten_post <- setdiff(variables_train, names(x_new))
 
     if (length(vars_falten_post) > 0) {
@@ -522,7 +550,6 @@ R_PREDICT_CODE = textwrap.dedent(
       }
     }
 
-    # Eliminem columnes sobrants i ordenem igual que al train
     x_new <- x_new[, variables_train, drop = FALSE]
 
     x_new[] <- lapply(x_new, as.numeric)
@@ -533,22 +560,22 @@ R_PREDICT_CODE = textwrap.dedent(
       return(x)
     })
 
+    # --------------------------------------------------------------------------
+    # Predicció
+
     dnew <- xgb.DMatrix(data = as.matrix(x_new))
 
     pred_raw <- predict(model, newdata = dnew)
 
     num_class <- length(nivells_k3)
 
-    # Cas 1: model amb multi:softmax
     if (length(pred_raw) == nrow(x_new)) {
 
       pred_num <- as.integer(round(pred_raw))
-
       probs <- NULL
 
     } else {
 
-      # Cas 2: model amb multi:softprob
       pred_prob_matrix <- matrix(
         pred_raw,
         ncol = num_class,
@@ -556,6 +583,7 @@ R_PREDICT_CODE = textwrap.dedent(
       )
 
       pred_num <- max.col(pred_prob_matrix) - 1
+
       probs <- as.data.frame(pred_prob_matrix)
       colnames(probs) <- paste0("prob_", nivells_k3)
     }
@@ -615,7 +643,7 @@ def predir_amb_model(df_input):
 
 
 # ==============================================================================
-# Fallback si no es poden extreure metadades del model
+# Fallback si no es poden extreure metadades
 
 FALLBACK_METADATA = {
     "variables": [
@@ -641,7 +669,11 @@ FALLBACK_METADATA = {
 # ==============================================================================
 # Capçalera principal
 
-st.markdown('<div class="main-title">📊 Aplicació de predicció de clúster</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="main-title">📊 Aplicació de predicció de clúster</div>',
+    unsafe_allow_html=True
+)
+
 st.markdown(
     """
     <div class="subtitle">
@@ -654,7 +686,7 @@ st.markdown(
 
 
 # ==============================================================================
-# Comprovacions inicials
+# Sidebar
 
 with st.sidebar:
     st.header("Configuració")
@@ -686,7 +718,7 @@ if MODEL_PATH is None:
 
 
 # ==============================================================================
-# Carreguem metadades del model
+# Carreguem metadades
 
 try:
     with st.spinner("Carregant informació del model..."):
@@ -711,7 +743,7 @@ if len(variables) == 0:
 
 
 # ==============================================================================
-# Pestanyes principals
+# Pestanyes
 
 tab_enquesta, tab_csv, tab_info = st.tabs(
     ["📝 Enquesta individual", "📁 Predicció amb CSV", "ℹ️ Informació"]
@@ -733,8 +765,7 @@ with tab_enquesta:
 
         respostes = {}
 
-        num_cols = 2
-        cols = st.columns(num_cols)
+        cols = st.columns(2)
 
         for idx, var_meta in enumerate(variables):
 
@@ -744,7 +775,7 @@ with tab_enquesta:
 
             etiqueta = netejar_nom_variable(nom)
 
-            col = cols[idx % num_cols]
+            col = cols[idx % 2]
 
             with col:
 
@@ -755,7 +786,6 @@ with tab_enquesta:
                     if len(opcions) == 0:
                         opcions = [""]
 
-                    # Valor per defecte més lògic en variables binàries
                     index_defecte = 0
 
                     if nom == "lesiones_previas" and "No" in opcions:
@@ -788,25 +818,6 @@ with tab_enquesta:
                     except Exception:
                         valor_defecte = 0.0
 
-                    kwargs = {
-                        "label": etiqueta,
-                        "value": valor_defecte,
-                        "help": f"Variable original: {nom}"
-                    }
-
-                    if minim is not None:
-                        try:
-                            kwargs["min_value"] = float(minim)
-                        except Exception:
-                            pass
-
-                    if maxim is not None:
-                        try:
-                            kwargs["max_value"] = float(maxim)
-                        except Exception:
-                            pass
-
-                    # Fatiga: millor amb slider si el rang és raonable
                     if "fatiga" in nom.lower():
                         min_slider = 0.0
                         max_slider = 10.0
@@ -818,16 +829,39 @@ with tab_enquesta:
                             except Exception:
                                 pass
 
+                        valor_defecte = min(
+                            max(valor_defecte, min_slider),
+                            max_slider
+                        )
+
                         valor = st.slider(
                             etiqueta,
                             min_value=min_slider,
                             max_value=max_slider,
-                            value=min(max(valor_defecte, min_slider), max_slider),
+                            value=valor_defecte,
                             step=1.0,
                             help=f"Variable original: {nom}"
                         )
 
                     else:
+                        kwargs = {
+                            "label": etiqueta,
+                            "value": valor_defecte,
+                            "help": f"Variable original: {nom}"
+                        }
+
+                        if minim is not None:
+                            try:
+                                kwargs["min_value"] = float(minim)
+                            except Exception:
+                                pass
+
+                        if maxim is not None:
+                            try:
+                                kwargs["max_value"] = float(maxim)
+                            except Exception:
+                                pass
+
                         valor = st.number_input(**kwargs)
 
                     respostes[nom] = valor
