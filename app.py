@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 # ==============================================================================
@@ -39,9 +40,9 @@ MODEL_CANDIDATES = [
 ]
 
 DATA_CANDIDATES = [
-    PROJECT_ROOT / "data" / "datos_cluster.RDS",
-    PROJECT_ROOT / "input" / "datos_cluster.RDS",
-    PROJECT_ROOT / "datos_cluster.RDS",
+    PROJECT_ROOT / "data" / "datos_modelling.RDS",
+    PROJECT_ROOT / "input" / "datos_modelling.RDS",
+    PROJECT_ROOT / "datos_modelling.RDS",
 ]
 
 MODEL_PATH = next((p for p in MODEL_CANDIDATES if p.exists()), None)
@@ -141,6 +142,7 @@ def normalitzar_nom(nom):
     return (
         str(nom)
         .lower()
+        .strip()
         .replace("á", "a")
         .replace("à", "a")
         .replace("é", "e")
@@ -298,22 +300,32 @@ def format_opcio(nom_variable, valor):
             "africà": "Africana",
             "africà": "Africana",
             "africa": "Africana",
+
             "afrodescendent": "Afrodescendent",
             "afrodescendiente": "Afrodescendent",
 
-            "caucasica": "Caucàsica",
-            "caucàsica": "Caucàsica",
-            "caucasico": "Caucàsica",
-            "blanca": "Caucàsica",
-            "blanco": "Caucàsica",
+            "caucasica": "Caucàsica/europea",
+            "caucasico": "Caucàsica/europea",
+            "caucasica/europea": "Caucàsica/europea",
+            "caucasico/europeo": "Caucàsica/europea",
+            "caucàsica": "Caucàsica/europea",
+            "caucàsica/europea": "Caucàsica/europea",
+            "blanca": "Caucàsica/europea",
+            "blanco": "Caucàsica/europea",
+            "europea": "Caucàsica/europea",
+            "europeo": "Caucàsica/europea",
 
             "asiatica": "Asiàtica",
             "asiàtica": "Asiàtica",
             "asiatico": "Asiàtica",
 
-            "llatina": "Llatina",
-            "latina": "Llatina",
-            "latino": "Llatina",
+            "llatina": "Llatinoamericana",
+            "latina": "Llatinoamericana",
+            "latino": "Llatinoamericana",
+            "latinoamericana": "Llatinoamericana",
+            "latinoamericano": "Llatinoamericana",
+            "llatinoamericana": "Llatinoamericana",
+            "llatinoamericà": "Llatinoamericana",
 
             "altres": "Altres",
             "otros": "Altres",
@@ -497,41 +509,74 @@ def semafor_risc(cluster):
         etiqueta_color = "#6B7280"
 
     return f"""
-    <div style="
-        display:flex;
-        align-items:center;
-        gap:1.2rem;
-        margin-top:1rem;
-        margin-bottom:1rem;
-        padding:1rem;
-        border:1px solid #E5E7EB;
-        border-radius:0.9rem;
-        background:#FAFAFA;
-    ">
-        <div style="
-            width:58px;
-            padding:9px;
-            border-radius:20px;
-            background:#111827;
-            display:flex;
-            flex-direction:column;
-            gap:8px;
-            align-items:center;
-        ">
-            <div style="width:29px;height:29px;border-radius:50%;background:{red_style};box-shadow:{shadow_red};"></div>
-            <div style="width:29px;height:29px;border-radius:50%;background:{yellow_style};box-shadow:{shadow_yellow};"></div>
-            <div style="width:29px;height:29px;border-radius:50%;background:{green_style};box-shadow:{shadow_green};"></div>
-        </div>
+    <html>
+    <head>
+        <style>
+            body {{
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: transparent;
+            }}
 
-        <div>
-            <div style="font-size:1.25rem;font-weight:800;color:{etiqueta_color};">
-                Semàfor de risc: {risc}
+            .semafor-wrapper {{
+                display: flex;
+                align-items: center;
+                gap: 1.2rem;
+                padding: 1rem;
+                border: 1px solid #E5E7EB;
+                border-radius: 0.9rem;
+                background: #FAFAFA;
+                box-sizing: border-box;
+                width: 100%;
+            }}
+
+            .semafor-box {{
+                width: 58px;
+                padding: 9px;
+                border-radius: 20px;
+                background: #111827;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                align-items: center;
+                flex-shrink: 0;
+            }}
+
+            .llum {{
+                width: 29px;
+                height: 29px;
+                border-radius: 50%;
+            }}
+
+            .text-risc {{
+                font-size: 1.25rem;
+                font-weight: 800;
+                color: {etiqueta_color};
+            }}
+
+            .text-cluster {{
+                color: #4B5563;
+                margin-top: 0.25rem;
+                font-size: 0.95rem;
+            }}
+        </style>
+    </head>
+
+    <body>
+        <div class="semafor-wrapper">
+            <div class="semafor-box">
+                <div class="llum" style="background:{red_style}; box-shadow:{shadow_red};"></div>
+                <div class="llum" style="background:{yellow_style}; box-shadow:{shadow_yellow};"></div>
+                <div class="llum" style="background:{green_style}; box-shadow:{shadow_green};"></div>
             </div>
-            <div style="color:#4B5563;margin-top:0.25rem;">
-                Resultat associat a <b>{cluster}</b>
+
+            <div>
+                <div class="text-risc">Semàfor de risc: {risc}</div>
+                <div class="text-cluster">Resultat associat a <b>{cluster}</b></div>
             </div>
         </div>
-    </div>
+    </body>
+    </html>
     """
 
 
@@ -956,7 +1001,7 @@ FALLBACK_METADATA = {
         {"name": "edad", "type": "numeric", "levels": None, "min": 10, "max": 60, "median": 20},
         {"name": "peso_kg", "type": "numeric", "levels": None, "min": 40, "max": 120, "median": 70},
         {"name": "altura_corporal_cm", "type": "numeric", "levels": None, "min": 140, "max": 220, "median": 175},
-        {"name": "raza", "type": "categorical", "levels": ["Africana", "Caucàsica", "Asiàtica", "Llatina", "Afrodescendent", "Altres"], "min": None, "max": None, "median": None},
+        {"name": "raza", "type": "categorical", "levels": ["Africana", "Caucàsica/europea", "Asiàtica", "Llatinoamericana", "Afrodescendent", "Altres"], "min": None, "max": None, "median": None},
         {"name": "min_entreno_fisico", "type": "numeric", "levels": None, "min": 0, "max": 1000, "median": 180},
         {"name": "min_entreno_pista", "type": "numeric", "levels": None, "min": 0, "max": 1000, "median": 240},
         {"name": "x1_partido", "type": "numeric", "levels": None, "min": 0, "max": 120, "median": 30},
@@ -1234,9 +1279,10 @@ with tab_enquesta:
 
             st.success(f"Clúster predit: {cluster_pred}")
 
-            st.markdown(
+            components.html(
                 semafor_risc(cluster_pred),
-                unsafe_allow_html=True
+                height=130,
+                scrolling=False
             )
 
             st.markdown(
