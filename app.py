@@ -2,6 +2,11 @@
 # [TFG] app.py
 #
 # Aplicació Streamlit per predir el risc lesiu amb modeloXGBoost.RDS
+# Inclou:
+#   1) Formulari tipus enquesta individual
+#   2) Predicció massiva mitjançant CSV
+#   3) Semàfor de risc
+#   4) Recomanacions personalitzades segons el clúster
 # ==============================================================================
 
 import os
@@ -86,6 +91,11 @@ st.markdown(
         font-weight: 750;
         margin-bottom: 0.4rem;
     }
+
+    .small-note {
+        color: #6B7280;
+        font-size: 0.92rem;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -122,7 +132,7 @@ def llegir_csv_robust(uploaded_file):
             ultim_error = e
 
     raise ValueError(
-        "No s'ha pogut llegir el CSV. Revisa que sigui un CSV real "
+        "No s'ha pogut llegir el CSV. Revisa que sigui un fitxer CSV real "
         "i que les columnes estiguin separades correctament."
     ) from ultim_error
 
@@ -150,16 +160,28 @@ def netejar_nom_variable(nom):
     nom_norm = normalitzar_nom(nom)
 
     diccionari = {
+        # ----------------------------------------------------------------------
+        # GÈNERE
         "genero": "Gènere",
         "genere": "Gènere",
         "gender": "Gènere",
         "sexo": "Gènere",
         "sexe": "Gènere",
+        "seleccion": "Gènere",
+        "seleccio": "Gènere",
 
+        # ----------------------------------------------------------------------
+        # EDAT
         "edad": "Edat",
         "edat": "Edat",
         "age": "Edat",
+        "edad_anos": "Edat",
+        "edad_años": "Edat",
+        "edat_anys": "Edat",
+        "edat_anos": "Edat",
 
+        # ----------------------------------------------------------------------
+        # PES I ALÇADA
         "peso_kg": "Pes corporal (kg)",
         "pes_kg": "Pes corporal (kg)",
         "peso": "Pes corporal (kg)",
@@ -170,10 +192,14 @@ def netejar_nom_variable(nom):
         "altura_cm": "Alçada corporal (cm)",
         "alcada_cm": "Alçada corporal (cm)",
 
+        # ----------------------------------------------------------------------
+        # RAÇA
         "raza": "Raça",
         "raca": "Raça",
         "raça": "Raça",
 
+        # ----------------------------------------------------------------------
+        # ENTRENAMENT I PARTITS
         "min_entreno_fisico": "Indica els minuts d'entreno físic setmanal",
         "minuts_entreno_fisic": "Indica els minuts d'entreno físic setmanal",
         "minutos_entreno_fisico": "Indica els minuts d'entreno físic setmanal",
@@ -196,15 +222,17 @@ def netejar_nom_variable(nom):
         "minuts_segon_partit": "Minuts jugats al segon partit (si no hi ha indica 0)",
         "minutos_segundo_partido": "Minuts jugats al segon partit (si no hi ha indica 0)",
 
-        "perc_fatiga": "Percentatge / nivell de fatiga",
-        "fatiga": "Percentatge / nivell de fatiga",
-        "percepcio_fatiga": "Percepció de fatiga després de l'última competició o entrenament",
+        # ----------------------------------------------------------------------
+        # FATIGA
+        "perc_fatiga": "Nivell de fatiga (habitualment)",
+        "fatiga": "Nivell de fatiga (habitualment)",
+        "percepcio_fatiga": "Percentatge de fatiga després de l'última competició o entrenament",
+        "percepcion_fatiga": "Percentatge de fatiga després de l'última competició o entrenament",
         "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana":
-            "Percepció de fatiga després de l'última competició o entrenament de la setmana",
+            "Percentatge de fatiga després de l'última competició o entrenament",
 
-        "seleccion": "Gènere",
-        "seleccio": "Gènere",
-
+        # ----------------------------------------------------------------------
+        # LESIONS
         "lesiones_previas": "Ha tingut lesions prèvies?",
         "lesions_previes": "Ha tingut lesions prèvies?",
 
@@ -224,6 +252,8 @@ def netejar_nom_variable(nom):
         "loc_cara": "Lesió a la cara",
         "loc_dorso": "Lesió al dors",
 
+        # ----------------------------------------------------------------------
+        # ESTRUCTURA AFECTADA
         "est_ligamento": "Afectació de lligament",
         "est_lligament": "Afectació de lligament",
 
@@ -247,8 +277,54 @@ def netejar_nom_variable(nom):
 
 def format_opcio(nom_variable, valor):
     valor_str = str(valor)
+    valor_norm = normalitzar_nom(valor_str)
     nom_norm = normalitzar_nom(nom_variable)
 
+    # --------------------------------------------------------------------------
+    # GÈNERE: mostrem Masculí / Femení, però mantenim el valor intern del model
+    if nom_norm in ["genero", "genere", "gender", "sexo", "sexe", "seleccion", "seleccio"]:
+        if valor_norm in ["masculina", "masculino", "masculi", "masculí", "home", "hombre"]:
+            return "MASCULÍ"
+        if valor_norm in ["femenina", "femenino", "femeni", "femení", "dona", "mujer"]:
+            return "FEMENÍ"
+
+    # --------------------------------------------------------------------------
+    # RAÇA en català
+    if nom_norm in ["raza", "raca", "raça"]:
+        mapa_raca = {
+            "africana": "Africana",
+            "africano": "Africana",
+            "africa": "Africana",
+            "africà": "Africana",
+            "africà": "Africana",
+            "africa": "Africana",
+            "afrodescendent": "Afrodescendent",
+            "afrodescendiente": "Afrodescendent",
+
+            "caucasica": "Caucàsica",
+            "caucàsica": "Caucàsica",
+            "caucasico": "Caucàsica",
+            "blanca": "Caucàsica",
+            "blanco": "Caucàsica",
+
+            "asiatica": "Asiàtica",
+            "asiàtica": "Asiàtica",
+            "asiatico": "Asiàtica",
+
+            "llatina": "Llatina",
+            "latina": "Llatina",
+            "latino": "Llatina",
+
+            "altres": "Altres",
+            "otros": "Altres",
+            "otro": "Altres",
+            "altra": "Altres",
+        }
+
+        return mapa_raca.get(valor_norm, valor_str)
+
+    # --------------------------------------------------------------------------
+    # Variables binàries de localització o estructura afectada
     if nom_norm.startswith("loc_") or nom_norm.startswith("est_"):
         if valor_str == "0":
             return "No"
@@ -256,6 +332,25 @@ def format_opcio(nom_variable, valor):
             return "Sí"
 
     return valor_str
+
+
+def es_variable_fatiga_slider(nom):
+    """
+    Força que les variables de fatiga es mostrin com a slider,
+    encara que el model les detecti com a categòriques.
+    """
+
+    nom_norm = normalitzar_nom(nom)
+
+    variables_slider = [
+        "perc_fatiga",
+        "fatiga",
+        "percepcio_fatiga",
+        "percepcion_fatiga",
+        "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana",
+    ]
+
+    return nom_norm in variables_slider or "fatiga" in nom_norm
 
 
 def descripcio_cluster(cluster):
@@ -861,7 +956,7 @@ FALLBACK_METADATA = {
         {"name": "edad", "type": "numeric", "levels": None, "min": 10, "max": 60, "median": 20},
         {"name": "peso_kg", "type": "numeric", "levels": None, "min": 40, "max": 120, "median": 70},
         {"name": "altura_corporal_cm", "type": "numeric", "levels": None, "min": 140, "max": 220, "median": 175},
-        {"name": "raza", "type": "categorical", "levels": ["Caucàsica", "Afrodescendent", "Asiàtica", "Llatina", "Altres"], "min": None, "max": None, "median": None},
+        {"name": "raza", "type": "categorical", "levels": ["Africana", "Caucàsica", "Asiàtica", "Llatina", "Afrodescendent", "Altres"], "min": None, "max": None, "median": None},
         {"name": "min_entreno_fisico", "type": "numeric", "levels": None, "min": 0, "max": 1000, "median": 180},
         {"name": "min_entreno_pista", "type": "numeric", "levels": None, "min": 0, "max": 1000, "median": 240},
         {"name": "x1_partido", "type": "numeric", "levels": None, "min": 0, "max": 120, "median": 30},
@@ -1002,7 +1097,51 @@ with tab_enquesta:
 
             with col:
 
-                if tipus == "categorical" and levels is not None:
+                if es_variable_fatiga_slider(nom):
+
+                    minim = var_meta.get("min", None)
+                    maxim = var_meta.get("max", None)
+                    mediana = var_meta.get("median", None)
+
+                    min_slider = 0.0
+                    max_slider = 10.0
+
+                    if minim is not None and maxim is not None:
+                        try:
+                            min_slider = float(minim)
+                            max_slider = float(maxim)
+                        except Exception:
+                            min_slider = 0.0
+                            max_slider = 10.0
+
+                    if mediana is None:
+                        valor_defecte = 5.0
+                    else:
+                        try:
+                            valor_defecte = float(mediana)
+                        except Exception:
+                            valor_defecte = 5.0
+
+                    valor_defecte = min(
+                        max(valor_defecte, min_slider),
+                        max_slider
+                    )
+
+                    valor = st.slider(
+                        etiqueta,
+                        min_value=min_slider,
+                        max_value=max_slider,
+                        value=valor_defecte,
+                        step=1.0,
+                        help=f"Variable original: {nom}"
+                    )
+
+                    if tipus == "categorical":
+                        respostes[nom] = str(int(valor)) if float(valor).is_integer() else str(valor)
+                    else:
+                        respostes[nom] = valor
+
+                elif tipus == "categorical" and levels is not None:
 
                     opcions = [str(x) for x in levels if str(x) != ""]
 
@@ -1012,10 +1151,22 @@ with tab_enquesta:
                     index_defecte = 0
                     nom_norm = normalitzar_nom(nom)
 
-                    if ("lesiones_previas" in nom_norm or "lesions_previes" in nom_norm) and "No" in opcions:
+                    if (
+                        nom_norm in ["genero", "genere", "gender", "sexo", "sexe", "seleccion", "seleccio"]
+                        and "Femenina" in opcions
+                    ):
+                        index_defecte = opcions.index("Femenina")
+
+                    if (
+                        ("lesiones_previas" in nom_norm or "lesions_previes" in nom_norm)
+                        and "No" in opcions
+                    ):
                         index_defecte = opcions.index("No")
 
-                    if (nom_norm.startswith("loc_") or nom_norm.startswith("est_")) and "0" in opcions:
+                    if (
+                        (nom_norm.startswith("loc_") or nom_norm.startswith("est_"))
+                        and "0" in opcions
+                    ):
                         index_defecte = opcions.index("0")
 
                     valor = st.selectbox(
@@ -1042,53 +1193,25 @@ with tab_enquesta:
                     except Exception:
                         valor_defecte = 0.0
 
-                    nom_norm = normalitzar_nom(nom)
+                    kwargs = {
+                        "label": etiqueta,
+                        "value": valor_defecte,
+                        "help": f"Variable original: {nom}"
+                    }
 
-                    if "fatiga" in nom_norm:
-                        min_slider = 0.0
-                        max_slider = 10.0
+                    if minim is not None:
+                        try:
+                            kwargs["min_value"] = float(minim)
+                        except Exception:
+                            pass
 
-                        if minim is not None and maxim is not None:
-                            try:
-                                min_slider = float(minim)
-                                max_slider = float(maxim)
-                            except Exception:
-                                pass
+                    if maxim is not None:
+                        try:
+                            kwargs["max_value"] = float(maxim)
+                        except Exception:
+                            pass
 
-                        valor_defecte = min(
-                            max(valor_defecte, min_slider),
-                            max_slider
-                        )
-
-                        valor = st.slider(
-                            etiqueta,
-                            min_value=min_slider,
-                            max_value=max_slider,
-                            value=valor_defecte,
-                            step=1.0,
-                            help=f"Variable original: {nom}"
-                        )
-
-                    else:
-                        kwargs = {
-                            "label": etiqueta,
-                            "value": valor_defecte,
-                            "help": f"Variable original: {nom}"
-                        }
-
-                        if minim is not None:
-                            try:
-                                kwargs["min_value"] = float(minim)
-                            except Exception:
-                                pass
-
-                        if maxim is not None:
-                            try:
-                                kwargs["max_value"] = float(maxim)
-                            except Exception:
-                                pass
-
-                        valor = st.number_input(**kwargs)
+                    valor = st.number_input(**kwargs)
 
                     respostes[nom] = valor
 
@@ -1278,7 +1401,7 @@ with tab_info:
                 "Variable original": v.get("name"),
                 "Pregunta en l'enquesta": netejar_nom_variable(v.get("name")),
                 "Tipus": v.get("type"),
-                "Valors possibles": ", ".join([str(x) for x in v.get("levels", [])])
+                "Valors possibles": ", ".join([format_opcio(v.get("name"), x) for x in v.get("levels", [])])
                 if v.get("levels") is not None else ""
             }
             for v in variables
