@@ -191,10 +191,10 @@ def netejar_nom_variable(nom):
         "minuts_partit": "Minuts jugats al partit",
         "minutos_partido": "Minuts jugats al partit",
 
-        "x2_partidos": "Minuts jugats al segon partit (si no hi ha indica "0")",
-        "x2_partits": "Minuts jugats al segon partit (si no hi ha indica "0")",
-        "minuts_segon_partit": "Minuts jugats al segon partit (si no hi ha indica "0")",
-        "minutos_segundo_partido": "Minuts jugats al segon partit (si no hi ha indica "0")",
+        "x2_partidos": "Minuts jugats al segon partit (si no hi ha indica 0)",
+        "x2_partits": "Minuts jugats al segon partit (si no hi ha indica 0)",
+        "minuts_segon_partit": "Minuts jugats al segon partit (si no hi ha indica 0)",
+        "minutos_segundo_partido": "Minuts jugats al segon partit (si no hi ha indica 0)",
 
         "perc_fatiga": "Percentatge / nivell de fatiga",
         "fatiga": "Percentatge / nivell de fatiga",
