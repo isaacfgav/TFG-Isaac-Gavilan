@@ -286,9 +286,9 @@ def format_opcio(nom_variable, valor):
     # GÈNERE: mostrem masculí / femení, però mantenim el valor intern del model
     if nom_norm in ["genero", "genere", "gender", "sexo", "sexe", "seleccion", "seleccio"]:
         if valor_norm in ["masculina", "masculino", "masculi", "masculí", "home", "hombre"]:
-            return "Masculí"
+            return "masculí"
         if valor_norm in ["femenina", "femenino", "femeni", "femení", "dona", "mujer"]:
-            return "Femení"
+            return "femení"
 
     # --------------------------------------------------------------------------
     # RAÇA en català
@@ -999,6 +999,22 @@ def predir_amb_model(df_input):
         return resultats
 
 
+def seleccionar_columnes_resultat(df):
+    columnes_resultat = [
+        "prediccio_cluster",
+        "nivell_risc",
+        "semafor",
+        "recomanacio"
+    ]
+
+    columnes_existents = [
+        col for col in columnes_resultat
+        if col in df.columns
+    ]
+
+    return df[columnes_existents]
+
+
 # ==============================================================================
 # FALLBACK SI NO ES PODEN EXTREURE METADADES
 # ==============================================================================
@@ -1308,10 +1324,13 @@ with tab_enquesta:
                 unsafe_allow_html=True
             )
 
-            st.subheader("Resultat complet")
-            st.dataframe(resultats, use_container_width=True)
+            st.subheader("Resultats de la predicció")
 
-            csv_resultats = resultats.to_csv(index=False).encode("utf-8")
+            resultats_mostrar = seleccionar_columnes_resultat(resultats)
+
+            st.dataframe(resultats_mostrar, use_container_width=True)
+
+            csv_resultats = resultats_mostrar.to_csv(index=False).encode("utf-8")
 
             st.download_button(
                 label="Descarregar resultat en CSV",
@@ -1373,7 +1392,10 @@ with tab_csv:
                         resultats_csv = predir_amb_model(df_csv)
 
                     st.subheader("Resultats de la predicció")
-                    st.dataframe(resultats_csv, use_container_width=True)
+
+                    resultats_csv_mostrar = seleccionar_columnes_resultat(resultats_csv)
+
+                    st.dataframe(resultats_csv_mostrar, use_container_width=True)
 
                     if "prediccio_cluster" in resultats_csv.columns:
 
@@ -1410,7 +1432,7 @@ with tab_csv:
 
                         st.dataframe(resum_risc, use_container_width=True)
 
-                    csv_resultats = resultats_csv.to_csv(index=False).encode("utf-8")
+                    csv_resultats = resultats_csv_mostrar.to_csv(index=False).encode("utf-8")
 
                     st.download_button(
                         label="Descarregar resultats en CSV",
