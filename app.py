@@ -286,9 +286,9 @@ def format_opcio(nom_variable, valor):
     # GÈNERE: mostrem masculí / femení, però mantenim el valor intern del model
     if nom_norm in ["genero", "genere", "gender", "sexo", "sexe", "seleccion", "seleccio"]:
         if valor_norm in ["masculina", "masculino", "masculi", "masculí", "home", "hombre"]:
-            return "masculí"
+            return "Masculí"
         if valor_norm in ["femenina", "femenino", "femeni", "femení", "dona", "mujer"]:
-            return "femení"
+            return "Femení"
 
     # --------------------------------------------------------------------------
     # RAÇA en català
