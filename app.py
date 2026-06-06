@@ -20,6 +20,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+
 # ==============================================================================
 # CONFIGURACIÓ GENERAL
 # ==============================================================================
@@ -282,12 +283,12 @@ def format_opcio(nom_variable, valor):
     nom_norm = normalitzar_nom(nom_variable)
 
     # --------------------------------------------------------------------------
-    # GÈNERE: mostrem Masculí / Femení, però mantenim el valor intern del model
+    # GÈNERE: mostrem masculí / femení, però mantenim el valor intern del model
     if nom_norm in ["genero", "genere", "gender", "sexo", "sexe", "seleccion", "seleccio"]:
         if valor_norm in ["masculina", "masculino", "masculi", "masculí", "home", "hombre"]:
-            return "MASCULÍ"
+            return "masculí"
         if valor_norm in ["femenina", "femenino", "femeni", "femení", "dona", "mujer"]:
-            return "FEMENÍ"
+            return "femení"
 
     # --------------------------------------------------------------------------
     # RAÇA en català
@@ -298,7 +299,6 @@ def format_opcio(nom_variable, valor):
             "africa": "Africana",
             "africà": "Africana",
             "africà": "Africana",
-            "africa": "Africana",
 
             "afrodescendent": "Afrodescendent",
             "afrodescendiente": "Afrodescendent",
@@ -513,8 +513,10 @@ def semafor_risc(cluster):
         <style>
             body {{
                 margin: 0;
+                padding: 0;
                 font-family: Arial, sans-serif;
                 background: transparent;
+                overflow: hidden;
             }}
 
             .semafor-wrapper {{
@@ -527,6 +529,7 @@ def semafor_risc(cluster):
                 background: #FAFAFA;
                 box-sizing: border-box;
                 width: 100%;
+                min-height: 150px;
             }}
 
             .semafor-box {{
@@ -538,7 +541,9 @@ def semafor_risc(cluster):
                 flex-direction: column;
                 gap: 8px;
                 align-items: center;
+                justify-content: center;
                 flex-shrink: 0;
+                margin-left: 2px;
             }}
 
             .llum {{
@@ -684,6 +689,10 @@ R_METADATA_CODE = textwrap.dedent(
     if (!is.null(data_path) && file.exists(data_path)) {
 
       dades <- readRDS(data_path)
+
+      if (is.list(dades) && !is.null(dades$train)) {
+        dades <- dades$train
+      }
 
       for (i in seq_along(meta)) {
 
@@ -1280,7 +1289,7 @@ with tab_enquesta:
 
             components.html(
                 semafor_risc(cluster_pred),
-                height=130,
+                height=170,
                 scrolling=False
             )
 
