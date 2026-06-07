@@ -8,6 +8,7 @@
 #   3) Semàfor de risc
 #   4) Recomanacions personalitzades segons el clúster
 #   5) Radial plot: observació analitzada vs mitjana del clúster predit
+#   6) Top 10 casos més semblants dins del clúster predit
 # ==============================================================================
 
 import os
@@ -1090,6 +1091,158 @@ R_RADIAL_CODE = textwrap.dedent(
 )
 
 
+# ==============================================================================
+# CODI R: TOP 10 CASOS MÉS SEMBLANTS DINS DEL CLÚSTER PREDIT
+# ==============================================================================
+
+R_TOP10_CODE = textwrap.dedent(
+    r"""
+    args <- commandArgs(trailingOnly = TRUE)
+
+    if (length(args) < 4) {
+      stop("Ús: Rscript top10.R input_csv data_path cluster_pred output_csv")
+    }
+
+    input_csv <- args[1]
+    data_path <- args[2]
+    cluster_pred <- args[3]
+    output_csv <- args[4]
+
+    dades <- readRDS(data_path)
+
+    if (is.list(dades) && !is.null(dades$train)) {
+      dades <- dades$train
+    }
+
+    if (!"k3" %in% names(dades)) {
+      stop("No s'ha trobat la variable k3 a les dades de modelització.")
+    }
+
+    obs <- read.csv(
+      input_csv,
+      stringsAsFactors = FALSE,
+      check.names = FALSE,
+      fileEncoding = "UTF-8"
+    )
+
+    dades$k3 <- as.character(dades$k3)
+
+    dades_cluster <- dades[dades$k3 == cluster_pred, , drop = FALSE]
+
+    if (nrow(dades_cluster) == 0) {
+      stop(paste0("No hi ha observacions del clúster ", cluster_pred, " a les dades train."))
+    }
+
+    convertir_numeric <- function(x) {
+      x <- as.character(x)
+      x <- gsub(",", ".", x)
+      suppressWarnings(as.numeric(x))
+    }
+
+    variables_excloses <- c(
+      "k3",
+      "genero", "genere", "gender", "sexo", "sexe",
+      "seleccion", "seleccio",
+      "raza", "raca", "raça",
+      "lesiones_previas", "lesions_previes"
+    )
+
+    vars <- intersect(names(obs), names(dades))
+    vars <- setdiff(vars, variables_excloses)
+
+    vars_valides <- c()
+    mat_cluster <- data.frame()
+    obs_norm <- c()
+
+    for (v in vars) {
+
+      train_num <- convertir_numeric(dades[[v]])
+      cluster_num <- convertir_numeric(dades_cluster[[v]])
+      obs_num <- convertir_numeric(obs[[v]][1])
+
+      if (all(is.na(train_num))) {
+        next
+      }
+
+      if (length(obs_num) == 0 || is.na(obs_num)) {
+        next
+      }
+
+      min_v <- min(train_num, na.rm = TRUE)
+      max_v <- max(train_num, na.rm = TRUE)
+
+      if (!is.finite(min_v) || !is.finite(max_v)) {
+        next
+      }
+
+      if (min_v == max_v) {
+        next
+      }
+
+      cluster_norm <- (cluster_num - min_v) / (max_v - min_v)
+      obs_v_norm <- (obs_num - min_v) / (max_v - min_v)
+
+      cluster_norm[cluster_norm < 0] <- 0
+      cluster_norm[cluster_norm > 1] <- 1
+
+      obs_v_norm <- max(0, min(1, obs_v_norm))
+
+      mediana_cluster <- median(cluster_norm, na.rm = TRUE)
+
+      if (is.na(mediana_cluster)) {
+        mediana_cluster <- 0
+      }
+
+      cluster_norm[is.na(cluster_norm)] <- mediana_cluster
+
+      mat_cluster[[v]] <- cluster_norm
+      obs_norm <- c(obs_norm, obs_v_norm)
+      vars_valides <- c(vars_valides, v)
+    }
+
+    if (length(vars_valides) == 0) {
+      stop("No hi ha variables numèriques vàlides per calcular similituds.")
+    }
+
+    mat_cluster <- as.data.frame(mat_cluster)
+    names(obs_norm) <- vars_valides
+
+    distancies <- apply(
+      mat_cluster,
+      1,
+      function(x) {
+        sqrt(mean((x - obs_norm)^2, na.rm = TRUE))
+      }
+    )
+
+    similitud <- 1 - distancies
+
+    similitud[similitud < 0] <- 0
+    similitud[similitud > 1] <- 1
+
+    resultat <- data.frame(
+      cas_train = rownames(dades_cluster),
+      cluster = cluster_pred,
+      similitud = similitud,
+      similitud_percentatge = round(similitud * 100, 2),
+      distancia = round(distancies, 4),
+      n_variables_comparades = length(vars_valides),
+      stringsAsFactors = FALSE
+    )
+
+    resultat <- resultat[order(resultat$similitud, decreasing = TRUE), , drop = FALSE]
+    resultat <- head(resultat, 10)
+
+    write.csv(
+      resultat,
+      output_csv,
+      row.names = FALSE,
+      fileEncoding = "UTF-8"
+    )
+    """
+)
+
+
 def predir_amb_model(df_input):
     if MODEL_PATH is None:
         raise FileNotFoundError("No s'ha trobat modeloXGBoost.RDS.")
@@ -1196,6 +1349,10 @@ def obtenir_dades_radial(df_input, cluster_pred):
 def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
     """
     Crea un radar plot comparant l'observació amb la mitjana del clúster.
+    Inclou tres zones visuals:
+      - Baix: verd clar
+      - Mitjà: groc clar
+      - Alt: vermell clar
     """
 
     dades_plot = dades_radial.copy()
@@ -1207,30 +1364,78 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
 
     categories = dades_plot["variable_mostrar"].tolist()
 
+    if len(categories) == 0:
+        return None
+
     observacio = dades_plot["observacio_norm"].tolist()
     mitjana_cluster = dades_plot["mitjana_cluster_norm"].tolist()
 
-    categories = categories + [categories[0]]
-    observacio = observacio + [observacio[0]]
-    mitjana_cluster = mitjana_cluster + [mitjana_cluster[0]]
+    categories_tancat = categories + [categories[0]]
+    observacio_tancat = observacio + [observacio[0]]
+    mitjana_tancat = mitjana_cluster + [mitjana_cluster[0]]
+
+    zona_alta = [1.00] * len(categories_tancat)
+    zona_mitjana = [0.66] * len(categories_tancat)
+    zona_baixa = [0.33] * len(categories_tancat)
 
     fig = go.Figure()
 
     fig.add_trace(
         go.Scatterpolar(
-            r=mitjana_cluster,
-            theta=categories,
+            r=zona_alta,
+            theta=categories_tancat,
             fill="toself",
-            name=f"Mitjana {cluster_pred}"
+            mode="lines",
+            line=dict(color="rgba(0,0,0,0)"),
+            fillcolor="rgba(255, 99, 99, 0.18)",
+            name="Zona alta",
+            hoverinfo="skip"
         )
     )
 
     fig.add_trace(
         go.Scatterpolar(
-            r=observacio,
-            theta=categories,
+            r=zona_mitjana,
+            theta=categories_tancat,
             fill="toself",
-            name="Observació analitzada"
+            mode="lines",
+            line=dict(color="rgba(0,0,0,0)"),
+            fillcolor="rgba(255, 220, 80, 0.28)",
+            name="Zona mitjana",
+            hoverinfo="skip"
+        )
+    )
+
+    fig.add_trace(
+        go.Scatterpolar(
+            r=zona_baixa,
+            theta=categories_tancat,
+            fill="toself",
+            mode="lines",
+            line=dict(color="rgba(0,0,0,0)"),
+            fillcolor="rgba(90, 220, 140, 0.30)",
+            name="Zona baixa",
+            hoverinfo="skip"
+        )
+    )
+
+    fig.add_trace(
+        go.Scatterpolar(
+            r=mitjana_tancat,
+            theta=categories_tancat,
+            fill="toself",
+            name=f"Mitjana {cluster_pred}",
+            line=dict(width=3)
+        )
+    )
+
+    fig.add_trace(
+        go.Scatterpolar(
+            r=observacio_tancat,
+            theta=categories_tancat,
+            fill="toself",
+            name="Observació analitzada",
+            line=dict(width=3)
         )
     )
 
@@ -1240,7 +1445,7 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
             radialaxis=dict(
                 visible=True,
                 range=[0, 1],
-                tickvals=[0, 0.5, 1],
+                tickvals=[0.33, 0.66, 1],
                 ticktext=["Baix", "Mitjà", "Alt"]
             )
         ),
@@ -1249,6 +1454,42 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
     )
 
     return fig
+
+
+def obtenir_top10_similars(df_input, cluster_pred):
+    """
+    Calcula els 10 casos més semblants a l'observació analitzada,
+    però només dins del clúster predit.
+    """
+
+    if DATA_PATH is None:
+        raise FileNotFoundError(
+            "No s'ha trobat datos_modelling.RDS. "
+            "És necessari per calcular els casos més semblants."
+        )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+
+        input_csv = tmpdir / "input_top10.csv"
+        output_csv = tmpdir / "top10_output.csv"
+
+        df_input.to_csv(input_csv, index=False, encoding="utf-8")
+
+        result = executar_r(
+            R_TOP10_CODE,
+            [input_csv, DATA_PATH, cluster_pred, output_csv]
+        )
+
+        if result.returncode != 0:
+            missatge = result.stderr
+            if result.stdout:
+                missatge += "\n\nSortida R:\n" + result.stdout
+            raise RuntimeError(missatge)
+
+        top10 = pd.read_csv(output_csv)
+
+        return top10
 
 
 # ==============================================================================
@@ -1576,10 +1817,11 @@ with tab_enquesta:
                         max_variables=10
                     )
 
-                    st.plotly_chart(
-                        fig_radial,
-                        use_container_width=True
-                    )
+                    if fig_radial is not None:
+                        st.plotly_chart(
+                            fig_radial,
+                            use_container_width=True
+                        )
 
                     with st.expander("Veure variables utilitzades en el radial plot"):
                         st.dataframe(
@@ -1603,6 +1845,38 @@ with tab_enquesta:
             except Exception as e:
                 st.warning(
                     "No s'ha pogut generar el radial plot de comparació amb la mitjana del clúster."
+                )
+                st.code(str(e))
+
+            # ------------------------------------------------------------------
+            # TOP 10 CASOS MÉS SEMBLANTS NOMÉS PER A L'ENQUESTA INDIVIDUAL
+
+            try:
+                top10_similars = obtenir_top10_similars(df_enquesta, cluster_pred)
+
+                if not top10_similars.empty:
+
+                    st.subheader("Top 10 casos més semblants dins del clúster predit")
+
+                    st.write(
+                        "Aquesta taula mostra els 10 casos del mateix clúster que més s'assemblen "
+                        "a l'observació analitzada. La similitud es calcula amb les variables "
+                        "numèriques normalitzades entre 0 i 1."
+                    )
+
+                    st.dataframe(
+                        top10_similars,
+                        use_container_width=True
+                    )
+
+                else:
+                    st.info(
+                        "No s'han trobat casos semblants dins del clúster predit."
+                    )
+
+            except Exception as e:
+                st.warning(
+                    "No s'ha pogut calcular el top 10 de casos més semblants."
                 )
                 st.code(str(e))
 
