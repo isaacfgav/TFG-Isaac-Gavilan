@@ -1008,6 +1008,25 @@ R_RADIAL_CODE = textwrap.dedent(
 
     convertir_numeric <- function(x) {
       x <- as.character(x)
+      x <- trimws(x)
+      x <- tolower(x)
+
+      x <- gsub("á", "a", x)
+      x <- gsub("à", "a", x)
+      x <- gsub("é", "e", x)
+      x <- gsub("è", "e", x)
+      x <- gsub("í", "i", x)
+      x <- gsub("ï", "i", x)
+      x <- gsub("ó", "o", x)
+      x <- gsub("ò", "o", x)
+      x <- gsub("ú", "u", x)
+      x <- gsub("ü", "u", x)
+      x <- gsub("ç", "c", x)
+      x <- gsub("ñ", "n", x)
+
+      x[x %in% c("si", "sí", "s", "yes", "true", "1")] <- "1"
+      x[x %in% c("no", "n", "false", "0")] <- "0"
+
       x <- gsub(",", ".", x)
       suppressWarnings(as.numeric(x))
     }
@@ -1016,8 +1035,7 @@ R_RADIAL_CODE = textwrap.dedent(
       "k3",
       "genero", "genere", "gender", "sexo", "sexe",
       "seleccion", "seleccio",
-      "raza", "raca", "raça",
-      "lesiones_previas", "lesions_previes"
+      "raza", "raca", "raça"
     )
 
     vars <- intersect(names(obs), names(dades))
@@ -1135,6 +1153,25 @@ R_TOP10_CODE = textwrap.dedent(
 
     convertir_numeric <- function(x) {
       x <- as.character(x)
+      x <- trimws(x)
+      x <- tolower(x)
+
+      x <- gsub("á", "a", x)
+      x <- gsub("à", "a", x)
+      x <- gsub("é", "e", x)
+      x <- gsub("è", "e", x)
+      x <- gsub("í", "i", x)
+      x <- gsub("ï", "i", x)
+      x <- gsub("ó", "o", x)
+      x <- gsub("ò", "o", x)
+      x <- gsub("ú", "u", x)
+      x <- gsub("ü", "u", x)
+      x <- gsub("ç", "c", x)
+      x <- gsub("ñ", "n", x)
+
+      x[x %in% c("si", "sí", "s", "yes", "true", "1")] <- "1"
+      x[x %in% c("no", "n", "false", "0")] <- "0"
+
       x <- gsub(",", ".", x)
       suppressWarnings(as.numeric(x))
     }
@@ -1143,15 +1180,14 @@ R_TOP10_CODE = textwrap.dedent(
       "k3",
       "genero", "genere", "gender", "sexo", "sexe",
       "seleccion", "seleccio",
-      "raza", "raca", "raça",
-      "lesiones_previas", "lesions_previes"
+      "raza", "raca", "raça"
     )
 
     vars <- intersect(names(obs), names(dades))
     vars <- setdiff(vars, variables_excloses)
 
     vars_valides <- c()
-    mat_cluster <- data.frame()
+    mat_cluster_list <- list()
     obs_norm <- c()
 
     for (v in vars) {
@@ -1195,7 +1231,7 @@ R_TOP10_CODE = textwrap.dedent(
 
       cluster_norm[is.na(cluster_norm)] <- mediana_cluster
 
-      mat_cluster[[v]] <- cluster_norm
+      mat_cluster_list[[v]] <- cluster_norm
       obs_norm <- c(obs_norm, obs_v_norm)
       vars_valides <- c(vars_valides, v)
     }
@@ -1204,7 +1240,7 @@ R_TOP10_CODE = textwrap.dedent(
       stop("No hi ha variables numèriques vàlides per calcular similituds.")
     }
 
-    mat_cluster <- as.data.frame(mat_cluster)
+    mat_cluster <- as.data.frame(mat_cluster_list)
     names(obs_norm) <- vars_valides
 
     distancies <- apply(
@@ -1223,7 +1259,7 @@ R_TOP10_CODE = textwrap.dedent(
     resultat <- data.frame(
       cas_train = rownames(dades_cluster),
       cluster = cluster_pred,
-      similitud = similitud,
+      similitud = round(similitud, 4),
       similitud_percentatge = round(similitud * 100, 2),
       distancia = round(distancies, 4),
       n_variables_comparades = length(vars_valides),
@@ -1232,6 +1268,8 @@ R_TOP10_CODE = textwrap.dedent(
 
     resultat <- resultat[order(resultat$similitud, decreasing = TRUE), , drop = FALSE]
     resultat <- head(resultat, 10)
+
+    rownames(resultat) <- NULL
 
     write.csv(
       resultat,
@@ -1346,20 +1384,118 @@ def obtenir_dades_radial(df_input, cluster_pred):
         return dades_radial
 
 
-def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
+def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
     """
     Crea un radar plot comparant l'observació amb la mitjana del clúster.
-    Inclou tres zones visuals:
-      - Baix: verd clar
-      - Mitjà: groc clar
-      - Alt: vermell clar
+
+    Inclou:
+      - Lesions i afectacions
+      - Fatiga
+      - Minuts d'entreno físic
+      - Minuts d'entreno a pista
+      - Minuts jugats al partit i al segon partit
     """
 
     dades_plot = dades_radial.copy()
 
-    dades_plot = dades_plot.sort_values(
+    variables_prioritaries = [
+        # Fatiga
+        "perc_fatiga",
+        "fatiga",
+        "percepcio_fatiga",
+        "percepcion_fatiga",
+        "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana",
+
+        # Entrenament físic
+        "min_entreno_fisico",
+        "minuts_entreno_fisic",
+        "minutos_entreno_fisico",
+        "entreno_fisico",
+        "entrenament_fisic",
+
+        # Entrenament a pista
+        "min_entreno_pista",
+        "minuts_entreno_pista",
+        "minutos_entreno_pista",
+        "entreno_pista",
+        "entrenament_pista",
+
+        # Partits
+        "x1_partido",
+        "x1_partit",
+        "minuts_partit",
+        "minutos_partido",
+
+        "x2_partidos",
+        "x2_partits",
+        "minuts_segon_partit",
+        "minutos_segundo_partido",
+
+        # Lesió prèvia
+        "lesiones_previas",
+        "lesions_previes",
+
+        # Localització de lesions
+        "loc_tobillo",
+        "loc_turmell",
+        "loc_rodilla",
+        "loc_genoll",
+        "loc_brazo",
+        "loc_brac",
+        "loc_hombro_clavicula",
+        "loc_espatlla_clavicula",
+        "loc_columna_lumbar",
+        "loc_cara",
+        "loc_dorso",
+
+        # Afectacions
+        "est_ligamento",
+        "est_lligament",
+        "est_menisco",
+        "est_menisc",
+        "est_hueso",
+        "est_os",
+        "est_musculo",
+        "est_muculo",
+        "est_muscle",
+        "est_muscul",
+    ]
+
+    dades_plot["variable_norm"] = dades_plot["variable"].apply(normalitzar_nom)
+
+    variables_prioritaries_norm = [
+        normalitzar_nom(v) for v in variables_prioritaries
+    ]
+
+    dades_prioritaries = dades_plot[
+        dades_plot["variable_norm"].isin(variables_prioritaries_norm)
+    ].copy()
+
+    ordre_prioritari = {
+        v: i for i, v in enumerate(variables_prioritaries_norm)
+    }
+
+    dades_prioritaries["ordre"] = dades_prioritaries["variable_norm"].map(
+        ordre_prioritari
+    )
+
+    dades_prioritaries = dades_prioritaries.sort_values(
+        by=["ordre", "diferencia"],
+        ascending=[True, False]
+    )
+
+    dades_restants = dades_plot[
+        ~dades_plot["variable_norm"].isin(variables_prioritaries_norm)
+    ].copy()
+
+    dades_restants = dades_restants.sort_values(
         by="diferencia",
         ascending=False
+    )
+
+    dades_plot = pd.concat(
+        [dades_prioritaries, dades_restants],
+        axis=0
     ).head(max_variables)
 
     categories = dades_plot["variable_mostrar"].tolist()
@@ -1380,6 +1516,7 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
 
     fig = go.Figure()
 
+    # Zona alta - vermell clar
     fig.add_trace(
         go.Scatterpolar(
             r=zona_alta,
@@ -1393,6 +1530,7 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
         )
     )
 
+    # Zona mitjana - groc clar
     fig.add_trace(
         go.Scatterpolar(
             r=zona_mitjana,
@@ -1406,6 +1544,7 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
         )
     )
 
+    # Zona baixa - verd clar
     fig.add_trace(
         go.Scatterpolar(
             r=zona_baixa,
@@ -1419,23 +1558,45 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
         )
     )
 
+    # Mitjana del clúster - negre
     fig.add_trace(
         go.Scatterpolar(
             r=mitjana_tancat,
             theta=categories_tancat,
             fill="toself",
+            fillcolor="rgba(0, 0, 0, 0.10)",
             name=f"Mitjana {cluster_pred}",
-            line=dict(width=3)
+            line=dict(
+                color="black",
+                width=4
+            ),
+            marker=dict(
+                color="black",
+                size=6
+            )
         )
     )
 
+    # Observació analitzada - blanc
     fig.add_trace(
         go.Scatterpolar(
             r=observacio_tancat,
             theta=categories_tancat,
             fill="toself",
+            fillcolor="rgba(255, 255, 255, 0.35)",
             name="Observació analitzada",
-            line=dict(width=3)
+            line=dict(
+                color="white",
+                width=4
+            ),
+            marker=dict(
+                color="white",
+                size=7,
+                line=dict(
+                    color="black",
+                    width=1
+                )
+            )
         )
     )
 
@@ -1450,7 +1611,9 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
             )
         ),
         showlegend=True,
-        margin=dict(l=40, r=40, t=70, b=40)
+        margin=dict(l=40, r=40, t=70, b=40),
+        paper_bgcolor="white",
+        plot_bgcolor="white"
     )
 
     return fig
@@ -1814,7 +1977,7 @@ with tab_enquesta:
                     fig_radial = crear_radial_plot(
                         dades_radial,
                         cluster_pred,
-                        max_variables=10
+                        max_variables=14
                     )
 
                     if fig_radial is not None:
