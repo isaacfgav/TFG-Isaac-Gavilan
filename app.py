@@ -7,6 +7,7 @@
 #   2) Predicció massiva mitjançant CSV
 #   3) Semàfor de risc
 #   4) Recomanacions personalitzades segons el clúster
+#   5) Radial plot: observació analitzada vs mitjana del clúster predit
 # ==============================================================================
 
 import os
@@ -19,6 +20,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
+import plotly.graph_objects as go
 
 
 # ==============================================================================
@@ -42,6 +44,7 @@ MODEL_CANDIDATES = [
 DATA_CANDIDATES = [
     PROJECT_ROOT / "data" / "datos_modelling.RDS",
     PROJECT_ROOT / "input" / "datos_modelling.RDS",
+    PROJECT_ROOT / "output" / "datos_modelling.RDS",
     PROJECT_ROOT / "datos_modelling.RDS",
 ]
 
@@ -252,7 +255,7 @@ def netejar_nom_variable(nom):
 
         "loc_columna_lumbar": "Lesió a la columna lumbar",
         "loc_cara": "Lesió a la cara",
-        "loc_dorso": "Lesió a la columna dorsal",
+        "loc_dorso": "Lesió al dors",
 
         # ----------------------------------------------------------------------
         # ESTRUCTURA AFECTADA
@@ -960,6 +963,133 @@ R_PREDICT_CODE = textwrap.dedent(
 )
 
 
+# ==============================================================================
+# CODI R: DADES PER AL RADIAL PLOT
+# ==============================================================================
+
+R_RADIAL_CODE = textwrap.dedent(
+    r"""
+    args <- commandArgs(trailingOnly = TRUE)
+
+    if (length(args) < 4) {
+      stop("Ús: Rscript radial.R input_csv data_path cluster_pred output_csv")
+    }
+
+    input_csv <- args[1]
+    data_path <- args[2]
+    cluster_pred <- args[3]
+    output_csv <- args[4]
+
+    dades <- readRDS(data_path)
+
+    if (is.list(dades) && !is.null(dades$train)) {
+      dades <- dades$train
+    }
+
+    if (!"k3" %in% names(dades)) {
+      stop("No s'ha trobat la variable k3 a les dades de modelització.")
+    }
+
+    obs <- read.csv(
+      input_csv,
+      stringsAsFactors = FALSE,
+      check.names = FALSE,
+      fileEncoding = "UTF-8"
+    )
+
+    dades$k3 <- as.character(dades$k3)
+
+    dades_cluster <- dades[dades$k3 == cluster_pred, , drop = FALSE]
+
+    if (nrow(dades_cluster) == 0) {
+      stop(paste0("No hi ha observacions del clúster ", cluster_pred, " a les dades train."))
+    }
+
+    convertir_numeric <- function(x) {
+      x <- as.character(x)
+      x <- gsub(",", ".", x)
+      suppressWarnings(as.numeric(x))
+    }
+
+    variables_excloses <- c(
+      "k3",
+      "genero", "genere", "gender", "sexo", "sexe",
+      "seleccion", "seleccio",
+      "raza", "raca", "raça",
+      "lesiones_previas", "lesions_previes"
+    )
+
+    vars <- intersect(names(obs), names(dades))
+    vars <- setdiff(vars, variables_excloses)
+
+    resultats <- data.frame(
+      variable = character(),
+      observacio_original = numeric(),
+      mitjana_cluster_original = numeric(),
+      observacio_norm = numeric(),
+      mitjana_cluster_norm = numeric(),
+      stringsAsFactors = FALSE
+    )
+
+    for (v in vars) {
+
+      train_num <- convertir_numeric(dades[[v]])
+      cluster_num <- convertir_numeric(dades_cluster[[v]])
+      obs_num <- convertir_numeric(obs[[v]][1])
+
+      if (all(is.na(train_num))) {
+        next
+      }
+
+      if (length(obs_num) == 0 || is.na(obs_num)) {
+        next
+      }
+
+      min_v <- min(train_num, na.rm = TRUE)
+      max_v <- max(train_num, na.rm = TRUE)
+
+      if (!is.finite(min_v) || !is.finite(max_v)) {
+        next
+      }
+
+      if (min_v == max_v) {
+        next
+      }
+
+      mitjana_cluster <- mean(cluster_num, na.rm = TRUE)
+
+      if (!is.finite(mitjana_cluster)) {
+        next
+      }
+
+      obs_norm <- (obs_num - min_v) / (max_v - min_v)
+      mitjana_norm <- (mitjana_cluster - min_v) / (max_v - min_v)
+
+      obs_norm <- max(0, min(1, obs_norm))
+      mitjana_norm <- max(0, min(1, mitjana_norm))
+
+      fila <- data.frame(
+        variable = v,
+        observacio_original = obs_num,
+        mitjana_cluster_original = mitjana_cluster,
+        observacio_norm = obs_norm,
+        mitjana_cluster_norm = mitjana_norm,
+        stringsAsFactors = FALSE
+      )
+
+      resultats <- rbind(resultats, fila)
+    }
+
+    write.csv(
+      resultats,
+      output_csv,
+      row.names = FALSE,
+      fileEncoding = "UTF-8"
+    )
+    """
+)
+
+
 def predir_amb_model(df_input):
     if MODEL_PATH is None:
         raise FileNotFoundError("No s'ha trobat modeloXGBoost.RDS.")
@@ -1013,6 +1143,112 @@ def seleccionar_columnes_resultat(df):
     ]
 
     return df[columnes_existents]
+
+
+def obtenir_dades_radial(df_input, cluster_pred):
+    """
+    Calcula les dades necessàries per al radial plot:
+    observació analitzada vs mitjana del clúster predit.
+    """
+
+    if DATA_PATH is None:
+        raise FileNotFoundError(
+            "No s'ha trobat datos_modelling.RDS. "
+            "És necessari per calcular la mitjana del clúster."
+        )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+
+        input_csv = tmpdir / "input_radial.csv"
+        output_csv = tmpdir / "radial_output.csv"
+
+        df_input.to_csv(input_csv, index=False, encoding="utf-8")
+
+        result = executar_r(
+            R_RADIAL_CODE,
+            [input_csv, DATA_PATH, cluster_pred, output_csv]
+        )
+
+        if result.returncode != 0:
+            missatge = result.stderr
+            if result.stdout:
+                missatge += "\n\nSortida R:\n" + result.stdout
+            raise RuntimeError(missatge)
+
+        dades_radial = pd.read_csv(output_csv)
+
+        if dades_radial.empty:
+            return dades_radial
+
+        dades_radial["variable_mostrar"] = dades_radial["variable"].apply(
+            netejar_nom_variable
+        )
+
+        dades_radial["diferencia"] = (
+            dades_radial["observacio_norm"] -
+            dades_radial["mitjana_cluster_norm"]
+        ).abs()
+
+        return dades_radial
+
+
+def crear_radial_plot(dades_radial, cluster_pred, max_variables=10):
+    """
+    Crea un radar plot comparant l'observació amb la mitjana del clúster.
+    """
+
+    dades_plot = dades_radial.copy()
+
+    dades_plot = dades_plot.sort_values(
+        by="diferencia",
+        ascending=False
+    ).head(max_variables)
+
+    categories = dades_plot["variable_mostrar"].tolist()
+
+    observacio = dades_plot["observacio_norm"].tolist()
+    mitjana_cluster = dades_plot["mitjana_cluster_norm"].tolist()
+
+    categories = categories + [categories[0]]
+    observacio = observacio + [observacio[0]]
+    mitjana_cluster = mitjana_cluster + [mitjana_cluster[0]]
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scatterpolar(
+            r=mitjana_cluster,
+            theta=categories,
+            fill="toself",
+            name=f"Mitjana {cluster_pred}"
+        )
+    )
+
+    fig.add_trace(
+        go.Scatterpolar(
+            r=observacio,
+            theta=categories,
+            fill="toself",
+            name="Observació analitzada"
+        )
+    )
+
+    fig.update_layout(
+        title="Comparació radial amb la mitjana del clúster",
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 1],
+                tickvals=[0, 0.5, 1],
+                ticktext=["Baix", "Mitjà", "Alt"]
+            )
+        ),
+        showlegend=True,
+        margin=dict(l=40, r=40, t=70, b=40)
+    )
+
+    return fig
 
 
 # ==============================================================================
@@ -1323,6 +1559,54 @@ with tab_enquesta:
                 recomanacions_cluster(cluster_pred),
                 unsafe_allow_html=True
             )
+
+            # ------------------------------------------------------------------
+            # RADIAL PLOT NOMÉS PER A L'ENQUESTA INDIVIDUAL
+
+            try:
+                dades_radial = obtenir_dades_radial(df_enquesta, cluster_pred)
+
+                if not dades_radial.empty:
+
+                    st.subheader("Comparació radial amb la mitjana del clúster")
+
+                    fig_radial = crear_radial_plot(
+                        dades_radial,
+                        cluster_pred,
+                        max_variables=10
+                    )
+
+                    st.plotly_chart(
+                        fig_radial,
+                        use_container_width=True
+                    )
+
+                    with st.expander("Veure variables utilitzades en el radial plot"):
+                        st.dataframe(
+                            dades_radial[
+                                [
+                                    "variable_mostrar",
+                                    "observacio_original",
+                                    "mitjana_cluster_original",
+                                    "observacio_norm",
+                                    "mitjana_cluster_norm"
+                                ]
+                            ],
+                            use_container_width=True
+                        )
+
+                else:
+                    st.info(
+                        "No s'han trobat variables numèriques suficients per generar el radial plot."
+                    )
+
+            except Exception as e:
+                st.warning(
+                    "No s'ha pogut generar el radial plot de comparació amb la mitjana del clúster."
+                )
+                st.code(str(e))
+
+            # ------------------------------------------------------------------
 
             st.subheader("Resultats de la predicció")
 
