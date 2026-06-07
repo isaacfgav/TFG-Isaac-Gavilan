@@ -252,7 +252,7 @@ def netejar_nom_variable(nom):
 
         "loc_columna_lumbar": "Lesió a la columna lumbar",
         "loc_cara": "Lesió a la cara",
-        "loc_dorso": "Lesió al dors",
+        "loc_dorso": "Lesió a la columna dorsal",
 
         # ----------------------------------------------------------------------
         # ESTRUCTURA AFECTADA
