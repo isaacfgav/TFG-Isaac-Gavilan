@@ -327,6 +327,34 @@ def format_opcio(nom_variable, valor):
     return valor_str
 
 
+def es_variable_localitzacio_lesio(nom):
+    nom_norm = normalitzar_nom(nom)
+    return nom_norm.startswith("loc_")
+
+
+def es_variable_afectacio(nom):
+    nom_norm = normalitzar_nom(nom)
+    return nom_norm.startswith("est_")
+
+
+def valor_binari_model(var_meta, seleccionat):
+    levels = var_meta.get("levels", None)
+
+    if levels is not None:
+        levels_str = [str(x) for x in levels]
+
+        if "0" in levels_str and "1" in levels_str:
+            return "1" if seleccionat else "0"
+
+        if "No" in levels_str and "Sí" in levels_str:
+            return "Sí" if seleccionat else "No"
+
+        if "No" in levels_str and "Si" in levels_str:
+            return "Si" if seleccionat else "No"
+
+    return "1" if seleccionat else "0"
+
+
 def es_variable_fatiga_slider(nom):
     nom_norm = normalitzar_nom(nom)
 
@@ -1250,11 +1278,13 @@ R_TOP10_CODE = textwrap.dedent(
     valors_casos <- as.data.frame(lapply(valors_casos, as.character), stringsAsFactors = FALSE)
     names(valors_casos) <- paste0("cas_", names(valors_casos))
 
-    valors_introduits <- data.frame(stringsAsFactors = FALSE)
+    valors_introduits <- data.frame(.fila_temp = seq_len(n_top))
 
     for (v in vars_mostrar) {
       valors_introduits[[paste0("introduit_", v)]] <- rep(as.character(obs[[v]][1]), n_top)
     }
+
+    valors_introduits$.fila_temp <- NULL
 
     resultat <- cbind(
       resultat_base,
@@ -1857,9 +1887,26 @@ with tab_enquesta:
     with st.form("formulari_enquesta"):
 
         respostes = {}
+
+        variables_lesions = [
+            v for v in variables
+            if es_variable_localitzacio_lesio(v.get("name"))
+        ]
+
+        variables_afectacions = [
+            v for v in variables
+            if es_variable_afectacio(v.get("name"))
+        ]
+
+        variables_formulari = [
+            v for v in variables
+            if not es_variable_localitzacio_lesio(v.get("name"))
+            and not es_variable_afectacio(v.get("name"))
+        ]
+
         cols = st.columns(2)
 
-        for idx, var_meta in enumerate(variables):
+        for idx, var_meta in enumerate(variables_formulari):
 
             nom = var_meta.get("name")
             tipus = var_meta.get("type", "numeric")
@@ -1936,12 +1983,6 @@ with tab_enquesta:
                     ):
                         index_defecte = opcions.index("No")
 
-                    if (
-                        (nom_norm.startswith("loc_") or nom_norm.startswith("est_"))
-                        and "0" in opcions
-                    ):
-                        index_defecte = opcions.index("0")
-
                     valor = st.selectbox(
                         etiqueta,
                         options=opcions,
@@ -1987,6 +2028,50 @@ with tab_enquesta:
                     valor = st.number_input(**kwargs)
 
                     respostes[nom] = valor
+
+        st.markdown("### Lesions i afectacions")
+
+        col_lesions, col_afectacions = st.columns(2)
+
+        with col_lesions:
+
+            opcions_lesions = [
+                v.get("name") for v in variables_lesions
+            ]
+
+            lesions_seleccionades = st.multiselect(
+                "Selecciona les localitzacions de lesió",
+                options=opcions_lesions,
+                format_func=lambda x: netejar_nom_variable(x),
+                help="Pots seleccionar més d'una localització. Si no n'hi ha cap, deixa-ho buit."
+            )
+
+        with col_afectacions:
+
+            opcions_afectacions = [
+                v.get("name") for v in variables_afectacions
+            ]
+
+            afectacions_seleccionades = st.multiselect(
+                "Selecciona les estructures afectades",
+                options=opcions_afectacions,
+                format_func=lambda x: netejar_nom_variable(x),
+                help="Pots seleccionar més d'una afectació. Si no n'hi ha cap, deixa-ho buit."
+            )
+
+        for var_meta in variables_lesions:
+            nom = var_meta.get("name")
+            respostes[nom] = valor_binari_model(
+                var_meta,
+                nom in lesions_seleccionades
+            )
+
+        for var_meta in variables_afectacions:
+            nom = var_meta.get("name")
+            respostes[nom] = valor_binari_model(
+                var_meta,
+                nom in afectacions_seleccionades
+            )
 
         enviar = st.form_submit_button("Predir risc", type="primary")
 
