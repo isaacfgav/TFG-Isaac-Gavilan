@@ -1660,8 +1660,25 @@ def crear_grafic_barres_comparacio(dades_radial, cluster_pred, max_variables=14)
         yaxis_title="Valor normalitzat",
         yaxis=dict(range=[0, 1]),
         barmode="group",
-        legend=dict(orientation="h"),
-        margin=dict(l=40, r=40, t=70, b=120)
+
+        # Llegenda apartada a la dreta
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02,
+            bgcolor="rgba(255,255,255,0.8)",
+            bordercolor="rgba(0,0,0,0.15)",
+            borderwidth=1
+        ),
+
+        margin=dict(
+            l=40,
+            r=220,
+            t=70,
+            b=150
+        )
     )
 
     fig.update_xaxes(tickangle=45)
