@@ -9,6 +9,7 @@
 #   4) Recomanacions personalitzades segons el clúster
 #   5) Radial plot: observació analitzada vs mitjana del clúster predit
 #   6) Top 10 casos més semblants dins del clúster predit
+#   7) Gràfics comparatius observació vs clúster
 # ==============================================================================
 
 import os
@@ -1148,21 +1149,24 @@ R_TOP10_CODE = textwrap.dedent(
       suppressWarnings(as.numeric(x))
     }
 
-    variables_excloses <- c(
+    variables_excloses_distancia <- c(
       "k3",
       "genero", "genere", "gender", "sexo", "sexe",
       "seleccion", "seleccio",
       "raza", "raca", "raça"
     )
 
-    vars <- intersect(names(obs), names(dades))
-    vars <- setdiff(vars, variables_excloses)
+    vars_distancia <- intersect(names(obs), names(dades))
+    vars_distancia <- setdiff(vars_distancia, variables_excloses_distancia)
+
+    vars_mostrar <- intersect(names(obs), names(dades))
+    vars_mostrar <- setdiff(vars_mostrar, "k3")
 
     vars_valides <- c()
     mat_cluster_list <- list()
     obs_norm <- c()
 
-    for (v in vars) {
+    for (v in vars_distancia) {
 
       train_num <- convertir_numeric(dades[[v]])
       cluster_num <- convertir_numeric(dades_cluster[[v]])
@@ -1228,18 +1232,35 @@ R_TOP10_CODE = textwrap.dedent(
     similitud[similitud < 0] <- 0
     similitud[similitud > 1] <- 1
 
-    resultat <- data.frame(
-      cas_train = rownames(dades_cluster),
+    ordre <- order(similitud, decreasing = TRUE)
+    n_top <- min(10, length(ordre))
+    idx_top <- ordre[seq_len(n_top)]
+
+    resultat_base <- data.frame(
+      cas_train = rownames(dades_cluster)[idx_top],
       cluster = cluster_pred,
-      similitud = round(similitud, 4),
-      similitud_percentatge = round(similitud * 100, 2),
-      distancia = round(distancies, 4),
+      similitud = round(similitud[idx_top], 4),
+      similitud_percentatge = round(similitud[idx_top] * 100, 2),
+      distancia = round(distancies[idx_top], 4),
       n_variables_comparades = length(vars_valides),
       stringsAsFactors = FALSE
     )
 
-    resultat <- resultat[order(resultat$similitud, decreasing = TRUE), , drop = FALSE]
-    resultat <- head(resultat, 10)
+    valors_casos <- dades_cluster[idx_top, vars_mostrar, drop = FALSE]
+    valors_casos <- as.data.frame(lapply(valors_casos, as.character), stringsAsFactors = FALSE)
+    names(valors_casos) <- paste0("cas_", names(valors_casos))
+
+    valors_introduits <- data.frame(stringsAsFactors = FALSE)
+
+    for (v in vars_mostrar) {
+      valors_introduits[[paste0("introduit_", v)]] <- rep(as.character(obs[[v]][1]), n_top)
+    }
+
+    resultat <- cbind(
+      resultat_base,
+      valors_casos,
+      valors_introduits
+    )
 
     rownames(resultat) <- NULL
 
@@ -1252,6 +1273,10 @@ R_TOP10_CODE = textwrap.dedent(
     """
 )
 
+
+# ==============================================================================
+# FUNCIONS DE PREDICCIÓ I VISUALITZACIÓ
+# ==============================================================================
 
 def predir_amb_model(df_input):
     if MODEL_PATH is None:
@@ -1351,69 +1376,70 @@ def obtenir_dades_radial(df_input, cluster_pred):
         return dades_radial
 
 
-def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
+VARIABLES_PRIORITARIES_RADIAL = [
+    "perc_fatiga",
+    "fatiga",
+    "percepcio_fatiga",
+    "percepcion_fatiga",
+    "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana",
+
+    "min_entreno_fisico",
+    "minuts_entreno_fisic",
+    "minutos_entreno_fisico",
+    "entreno_fisico",
+    "entrenament_fisic",
+
+    "min_entreno_pista",
+    "minuts_entreno_pista",
+    "minutos_entreno_pista",
+    "entreno_pista",
+    "entrenament_pista",
+
+    "x1_partido",
+    "x1_partit",
+    "minuts_partit",
+    "minutos_partido",
+
+    "x2_partidos",
+    "x2_partits",
+    "minuts_segon_partit",
+    "minutos_segundo_partido",
+
+    "lesiones_previas",
+    "lesions_previes",
+
+    "loc_tobillo",
+    "loc_turmell",
+    "loc_rodilla",
+    "loc_genoll",
+    "loc_brazo",
+    "loc_brac",
+    "loc_hombro_clavicula",
+    "loc_espatlla_clavicula",
+    "loc_columna_lumbar",
+    "loc_cara",
+    "loc_dorso",
+
+    "est_ligamento",
+    "est_lligament",
+    "est_menisco",
+    "est_menisc",
+    "est_hueso",
+    "est_os",
+    "est_musculo",
+    "est_muculo",
+    "est_muscle",
+    "est_muscul",
+]
+
+
+def seleccionar_variables_radial(dades_radial, max_variables=14):
     dades_plot = dades_radial.copy()
-
-    variables_prioritaries = [
-        "perc_fatiga",
-        "fatiga",
-        "percepcio_fatiga",
-        "percepcion_fatiga",
-        "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana",
-
-        "min_entreno_fisico",
-        "minuts_entreno_fisic",
-        "minutos_entreno_fisico",
-        "entreno_fisico",
-        "entrenament_fisic",
-
-        "min_entreno_pista",
-        "minuts_entreno_pista",
-        "minutos_entreno_pista",
-        "entreno_pista",
-        "entrenament_pista",
-
-        "x1_partido",
-        "x1_partit",
-        "minuts_partit",
-        "minutos_partido",
-
-        "x2_partidos",
-        "x2_partits",
-        "minuts_segon_partit",
-        "minutos_segundo_partido",
-
-        "lesiones_previas",
-        "lesions_previes",
-
-        "loc_tobillo",
-        "loc_turmell",
-        "loc_rodilla",
-        "loc_genoll",
-        "loc_brazo",
-        "loc_brac",
-        "loc_hombro_clavicula",
-        "loc_espatlla_clavicula",
-        "loc_columna_lumbar",
-        "loc_cara",
-        "loc_dorso",
-
-        "est_ligamento",
-        "est_lligament",
-        "est_menisco",
-        "est_menisc",
-        "est_hueso",
-        "est_os",
-        "est_musculo",
-        "est_muculo",
-        "est_muscle",
-        "est_muscul",
-    ]
 
     dades_plot["variable_norm"] = dades_plot["variable"].apply(normalitzar_nom)
 
     variables_prioritaries_norm = [
-        normalitzar_nom(v) for v in variables_prioritaries
+        normalitzar_nom(v) for v in VARIABLES_PRIORITARIES_RADIAL
     ]
 
     dades_prioritaries = dades_plot[
@@ -1446,6 +1472,12 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         [dades_prioritaries, dades_restants],
         axis=0
     ).head(max_variables)
+
+    return dades_plot
+
+
+def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
+    dades_plot = seleccionar_variables_radial(dades_radial, max_variables)
 
     categories = dades_plot["variable_mostrar"].tolist()
 
@@ -1558,6 +1590,99 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         margin=dict(l=40, r=40, t=70, b=40),
         paper_bgcolor="white",
         plot_bgcolor="white"
+    )
+
+    return fig
+
+
+def crear_grafic_barres_comparacio(dades_radial, cluster_pred, max_variables=14):
+    dades_plot = seleccionar_variables_radial(dades_radial, max_variables)
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=dades_plot["variable_mostrar"],
+            y=dades_plot["mitjana_cluster_norm"],
+            name=f"Mitjana {cluster_pred}",
+            marker=dict(color="black")
+        )
+    )
+
+    fig.add_trace(
+        go.Bar(
+            x=dades_plot["variable_mostrar"],
+            y=dades_plot["observacio_norm"],
+            name="Observació analitzada",
+            marker=dict(
+                color="white",
+                line=dict(
+                    color="black",
+                    width=1.5
+                )
+            )
+        )
+    )
+
+    fig.update_layout(
+        title="Comparació normalitzada observació vs clúster",
+        xaxis_title="Variable",
+        yaxis_title="Valor normalitzat",
+        yaxis=dict(range=[0, 1]),
+        barmode="group",
+        legend=dict(orientation="h"),
+        margin=dict(l=40, r=40, t=70, b=120)
+    )
+
+    fig.update_xaxes(tickangle=45)
+
+    return fig
+
+
+def crear_grafic_diferencies(dades_radial, max_variables=14):
+    dades_plot = seleccionar_variables_radial(dades_radial, max_variables)
+
+    dades_plot = dades_plot.copy()
+    dades_plot["diferencia_signada"] = (
+        dades_plot["observacio_norm"] -
+        dades_plot["mitjana_cluster_norm"]
+    )
+
+    dades_plot = dades_plot.sort_values(
+        by="diferencia_signada",
+        ascending=True
+    )
+
+    colors = [
+        "#EF4444" if x > 0 else "#3B82F6"
+        for x in dades_plot["diferencia_signada"]
+    ]
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=dades_plot["diferencia_signada"],
+            y=dades_plot["variable_mostrar"],
+            orientation="h",
+            marker=dict(color=colors),
+            name="Diferència"
+        )
+    )
+
+    fig.add_vline(
+        x=0,
+        line_width=2,
+        line_dash="dash",
+        line_color="black"
+    )
+
+    fig.update_layout(
+        title="Diferència respecte a la mitjana del clúster",
+        xaxis_title="Observació - mitjana del clúster",
+        yaxis_title="Variable",
+        margin=dict(l=40, r=40, t=70, b=40),
+        showlegend=False
     )
 
     return fig
@@ -1869,9 +1994,6 @@ with tab_enquesta:
 
         df_enquesta = pd.DataFrame([respostes])
 
-        st.subheader("Dades introduïdes")
-        st.dataframe(df_enquesta, use_container_width=True)
-
         try:
             with st.spinner("Executant el model XGBoost..."):
                 resultats = predir_amb_model(df_enquesta)
@@ -1904,7 +2026,7 @@ with tab_enquesta:
             )
 
             # ------------------------------------------------------------------
-            # RADIAL PLOT NOMÉS PER A L'ENQUESTA INDIVIDUAL
+            # RADIAL PLOT I GRÀFICS COMPARATIUS
 
             try:
                 dades_radial = obtenir_dades_radial(df_enquesta, cluster_pred)
@@ -1925,15 +2047,45 @@ with tab_enquesta:
                             use_container_width=True
                         )
 
+                    st.subheader("Gràfics comparatius amb el clúster")
+
+                    st.write(
+                        "Els gràfics següents comparen l'observació analitzada amb la mitjana "
+                        "del clúster predit utilitzant valors normalitzats entre 0 i 1."
+                    )
+
+                    col_grafic_1, col_grafic_2 = st.columns(2)
+
+                    with col_grafic_1:
+                        fig_barres = crear_grafic_barres_comparacio(
+                            dades_radial,
+                            cluster_pred,
+                            max_variables=14
+                        )
+
+                        st.plotly_chart(
+                            fig_barres,
+                            use_container_width=True
+                        )
+
+                    with col_grafic_2:
+                        fig_diferencies = crear_grafic_diferencies(
+                            dades_radial,
+                            max_variables=14
+                        )
+
+                        st.plotly_chart(
+                            fig_diferencies,
+                            use_container_width=True
+                        )
+
                     with st.expander("Veure variables utilitzades en el radial plot"):
                         st.dataframe(
                             dades_radial[
                                 [
                                     "variable_mostrar",
                                     "observacio_original",
-                                    "mitjana_cluster_original",
-                                    "observacio_norm",
-                                    "mitjana_cluster_norm"
+                                    "mitjana_cluster_original"
                                 ]
                             ],
                             use_container_width=True
@@ -1946,12 +2098,12 @@ with tab_enquesta:
 
             except Exception as e:
                 st.warning(
-                    "No s'ha pogut generar el radial plot de comparació amb la mitjana del clúster."
+                    "No s'ha pogut generar el radial plot o els gràfics comparatius."
                 )
                 st.code(str(e))
 
             # ------------------------------------------------------------------
-            # TOP 10 CASOS MÉS SEMBLANTS NOMÉS PER A L'ENQUESTA INDIVIDUAL
+            # TOP 10 CASOS MÉS SEMBLANTS
 
             try:
                 top10_similars = obtenir_top10_similars(df_enquesta, cluster_pred)
@@ -1962,8 +2114,8 @@ with tab_enquesta:
 
                     st.write(
                         "Aquesta taula mostra els 10 casos del mateix clúster que més s'assemblen "
-                        "a l'observació analitzada. La similitud es calcula amb les variables "
-                        "numèriques normalitzades entre 0 i 1."
+                        "a l'observació analitzada. També s'afegeixen els valors introduïts "
+                        "per poder comparar-los amb els casos més semblants."
                     )
 
                     st.dataframe(
@@ -1981,23 +2133,6 @@ with tab_enquesta:
                     "No s'ha pogut calcular el top 10 de casos més semblants."
                 )
                 st.code(str(e))
-
-            # ------------------------------------------------------------------
-
-            st.subheader("Resultats de la predicció")
-
-            resultats_mostrar = seleccionar_columnes_resultat(resultats)
-
-            st.dataframe(resultats_mostrar, use_container_width=True)
-
-            csv_resultats = resultats_mostrar.to_csv(index=False).encode("utf-8")
-
-            st.download_button(
-                label="Descarregar resultat en CSV",
-                data=csv_resultats,
-                file_name="resultat_enquesta_xgboost.csv",
-                mime="text/csv"
-            )
 
         except Exception as e:
             st.error("Hi ha hagut un error fent la predicció.")
