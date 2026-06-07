@@ -166,8 +166,6 @@ def netejar_nom_variable(nom):
     nom_norm = normalitzar_nom(nom)
 
     diccionari = {
-        # ----------------------------------------------------------------------
-        # GÈNERE
         "genero": "Gènere",
         "genere": "Gènere",
         "gender": "Gènere",
@@ -176,8 +174,6 @@ def netejar_nom_variable(nom):
         "seleccion": "Gènere",
         "seleccio": "Gènere",
 
-        # ----------------------------------------------------------------------
-        # EDAT
         "edad": "Edat",
         "edat": "Edat",
         "age": "Edat",
@@ -186,8 +182,6 @@ def netejar_nom_variable(nom):
         "edat_anys": "Edat",
         "edat_anos": "Edat",
 
-        # ----------------------------------------------------------------------
-        # PES I ALÇADA
         "peso_kg": "Pes corporal (kg)",
         "pes_kg": "Pes corporal (kg)",
         "peso": "Pes corporal (kg)",
@@ -198,14 +192,10 @@ def netejar_nom_variable(nom):
         "altura_cm": "Alçada corporal (cm)",
         "alcada_cm": "Alçada corporal (cm)",
 
-        # ----------------------------------------------------------------------
-        # RAÇA
         "raza": "Raça",
         "raca": "Raça",
         "raça": "Raça",
 
-        # ----------------------------------------------------------------------
-        # ENTRENAMENT I PARTITS
         "min_entreno_fisico": "Indica els minuts d'entreno físic setmanal",
         "minuts_entreno_fisic": "Indica els minuts d'entreno físic setmanal",
         "minutos_entreno_fisico": "Indica els minuts d'entreno físic setmanal",
@@ -228,8 +218,6 @@ def netejar_nom_variable(nom):
         "minuts_segon_partit": "Minuts jugats al segon partit (si no hi ha indica 0)",
         "minutos_segundo_partido": "Minuts jugats al segon partit (si no hi ha indica 0)",
 
-        # ----------------------------------------------------------------------
-        # FATIGA
         "perc_fatiga": "Nivell de fatiga (habitualment)",
         "fatiga": "Nivell de fatiga (habitualment)",
         "percepcio_fatiga": "Percentatge de fatiga després de l'última competició o entrenament",
@@ -237,8 +225,6 @@ def netejar_nom_variable(nom):
         "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana":
             "Percentatge de fatiga després de l'última competició o entrenament",
 
-        # ----------------------------------------------------------------------
-        # LESIONS
         "lesiones_previas": "Ha tingut lesions prèvies?",
         "lesions_previes": "Ha tingut lesions prèvies?",
 
@@ -258,8 +244,6 @@ def netejar_nom_variable(nom):
         "loc_cara": "Lesió a la cara",
         "loc_dorso": "Lesió al dors",
 
-        # ----------------------------------------------------------------------
-        # ESTRUCTURA AFECTADA
         "est_ligamento": "Afectació de lligament",
         "est_lligament": "Afectació de lligament",
 
@@ -286,22 +270,17 @@ def format_opcio(nom_variable, valor):
     valor_norm = normalitzar_nom(valor_str)
     nom_norm = normalitzar_nom(nom_variable)
 
-    # --------------------------------------------------------------------------
-    # GÈNERE: mostrem masculí / femení, però mantenim el valor intern del model
     if nom_norm in ["genero", "genere", "gender", "sexo", "sexe", "seleccion", "seleccio"]:
         if valor_norm in ["masculina", "masculino", "masculi", "masculí", "home", "hombre"]:
-            return "masculí"
+            return "Masculí"
         if valor_norm in ["femenina", "femenino", "femeni", "femení", "dona", "mujer"]:
-            return "femení"
+            return "Femení"
 
-    # --------------------------------------------------------------------------
-    # RAÇA en català
     if nom_norm in ["raza", "raca", "raça"]:
         mapa_raca = {
             "africana": "Africana",
             "africano": "Africana",
             "africa": "Africana",
-            "africà": "Africana",
             "africà": "Africana",
 
             "afrodescendent": "Afrodescendent",
@@ -338,8 +317,6 @@ def format_opcio(nom_variable, valor):
 
         return mapa_raca.get(valor_norm, valor_str)
 
-    # --------------------------------------------------------------------------
-    # Variables binàries de localització o estructura afectada
     if nom_norm.startswith("loc_") or nom_norm.startswith("est_"):
         if valor_str == "0":
             return "No"
@@ -350,11 +327,6 @@ def format_opcio(nom_variable, valor):
 
 
 def es_variable_fatiga_slider(nom):
-    """
-    Força que les variables de fatiga es mostrin com a slider,
-    encara que el model les detecti com a categòriques.
-    """
-
     nom_norm = normalitzar_nom(nom)
 
     variables_slider = [
@@ -1337,11 +1309,6 @@ def seleccionar_columnes_resultat(df):
 
 
 def obtenir_dades_radial(df_input, cluster_pred):
-    """
-    Calcula les dades necessàries per al radial plot:
-    observació analitzada vs mitjana del clúster predit.
-    """
-
     if DATA_PATH is None:
         raise FileNotFoundError(
             "No s'ha trobat datos_modelling.RDS. "
@@ -1385,42 +1352,27 @@ def obtenir_dades_radial(df_input, cluster_pred):
 
 
 def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
-    """
-    Crea un radar plot comparant l'observació amb la mitjana del clúster.
-
-    Inclou:
-      - Lesions i afectacions
-      - Fatiga
-      - Minuts d'entreno físic
-      - Minuts d'entreno a pista
-      - Minuts jugats al partit i al segon partit
-    """
-
     dades_plot = dades_radial.copy()
 
     variables_prioritaries = [
-        # Fatiga
         "perc_fatiga",
         "fatiga",
         "percepcio_fatiga",
         "percepcion_fatiga",
         "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana",
 
-        # Entrenament físic
         "min_entreno_fisico",
         "minuts_entreno_fisic",
         "minutos_entreno_fisico",
         "entreno_fisico",
         "entrenament_fisic",
 
-        # Entrenament a pista
         "min_entreno_pista",
         "minuts_entreno_pista",
         "minutos_entreno_pista",
         "entreno_pista",
         "entrenament_pista",
 
-        # Partits
         "x1_partido",
         "x1_partit",
         "minuts_partit",
@@ -1431,11 +1383,9 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         "minuts_segon_partit",
         "minutos_segundo_partido",
 
-        # Lesió prèvia
         "lesiones_previas",
         "lesions_previes",
 
-        # Localització de lesions
         "loc_tobillo",
         "loc_turmell",
         "loc_rodilla",
@@ -1448,7 +1398,6 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         "loc_cara",
         "loc_dorso",
 
-        # Afectacions
         "est_ligamento",
         "est_lligament",
         "est_menisco",
@@ -1516,7 +1465,6 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
 
     fig = go.Figure()
 
-    # Zona alta - vermell clar
     fig.add_trace(
         go.Scatterpolar(
             r=zona_alta,
@@ -1530,7 +1478,6 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         )
     )
 
-    # Zona mitjana - groc clar
     fig.add_trace(
         go.Scatterpolar(
             r=zona_mitjana,
@@ -1544,7 +1491,6 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         )
     )
 
-    # Zona baixa - verd clar
     fig.add_trace(
         go.Scatterpolar(
             r=zona_baixa,
@@ -1558,7 +1504,6 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         )
     )
 
-    # Mitjana del clúster - negre
     fig.add_trace(
         go.Scatterpolar(
             r=mitjana_tancat,
@@ -1577,7 +1522,6 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
         )
     )
 
-    # Observació analitzada - blanc
     fig.add_trace(
         go.Scatterpolar(
             r=observacio_tancat,
@@ -1620,11 +1564,6 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
 
 
 def obtenir_top10_similars(df_input, cluster_pred):
-    """
-    Calcula els 10 casos més semblants a l'observació analitzada,
-    però només dins del clúster predit.
-    """
-
     if DATA_PATH is None:
         raise FileNotFoundError(
             "No s'ha trobat datos_modelling.RDS. "
