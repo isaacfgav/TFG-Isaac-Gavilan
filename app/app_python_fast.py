@@ -465,7 +465,6 @@ def obtenir_top10_similars(df_input, cluster_pred, reference_train):
 # ============================================================================== 
 
 st.markdown('<div class="main-title">📊 Aplicació de predicció de risc lesiu</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Versió ràpida 100% Python: sense Rscript durant l’execució de Streamlit.</div>', unsafe_allow_html=True)
 
 with st.sidebar:
     st.header("Configuració")
