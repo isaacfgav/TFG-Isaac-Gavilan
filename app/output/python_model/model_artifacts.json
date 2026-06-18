@@ -1,0 +1,366 @@
+{
+  "variables": [
+    {
+      "name": "seleccion",
+      "type": "categorical",
+      "levels": ["Femenina", "Masculina"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "edad_anos",
+      "type": "numeric",
+      "levels": {},
+      "min": 10,
+      "max": 30,
+      "median": 20
+    },
+    {
+      "name": "peso_kg",
+      "type": "numeric",
+      "levels": {},
+      "min": 25.3,
+      "max": 114.8,
+      "median": 68.4
+    },
+    {
+      "name": "altura_corporal_cm",
+      "type": "numeric",
+      "levels": {},
+      "min": 129,
+      "max": 210,
+      "median": 175
+    },
+    {
+      "name": "raza",
+      "type": "categorical",
+      "levels": ["Africano", "Caucásico/europeo", "Latinoamericano"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "min_entreno_fisico",
+      "type": "numeric",
+      "levels": {},
+      "min": 0,
+      "max": 466,
+      "median": 92
+    },
+    {
+      "name": "min_entreno_pista",
+      "type": "numeric",
+      "levels": {},
+      "min": 0,
+      "max": 552,
+      "median": 250
+    },
+    {
+      "name": "x1_partido",
+      "type": "categorical",
+      "levels": ["0", "1-10'", "10-20'", "20-30'"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "x2_partidos",
+      "type": "categorical",
+      "levels": ["0", "1-10'", "10-20'", "20-30'"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana",
+      "type": "categorical",
+      "levels": ["1", "10", "2", "3", "4", "5", "6", "7", "8", "9"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "lesiones_previas",
+      "type": "categorical",
+      "levels": ["No", "Sí"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "perc_fatiga",
+      "type": "numeric",
+      "levels": {},
+      "min": 1,
+      "max": 10,
+      "median": 5
+    },
+    {
+      "name": "loc_hombro_clavicula",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "loc_brazo",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "loc_rodilla",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "loc_tobillo",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "loc_dorso",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "loc_columna_lumbar",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "loc_cara",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "est_musculo",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "est_ligamento",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "est_hueso",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    },
+    {
+      "name": "est_menisco",
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "min": {},
+      "max": {},
+      "median": {}
+    }
+  ],
+  "variable_names": ["seleccion", "edad_anos", "peso_kg", "altura_corporal_cm", "raza", "min_entreno_fisico", "min_entreno_pista", "x1_partido", "x2_partidos", "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana", "lesiones_previas", "perc_fatiga", "loc_hombro_clavicula", "loc_brazo", "loc_rodilla", "loc_tobillo", "loc_dorso", "loc_columna_lumbar", "loc_cara", "est_musculo", "est_ligamento", "est_hueso", "est_menisco"],
+  "variables_train": ["seleccion.Masculina", "edad_anos", "peso_kg", "altura_corporal_cm", "raza.Caucásico.europeo", "raza.Latinoamericano", "min_entreno_pista", "x1_partido.1.10.", "x1_partido.10.20.", "x1_partido.20.30.", "x2_partidos.10.20.", "x2_partidos.20.30.", "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.3", "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.4", "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.5", "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.6", "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.7", "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.8", "lesiones_previas.Sí", "perc_fatiga", "loc_hombro_clavicula.1", "loc_brazo.1", "loc_rodilla.1", "loc_tobillo.1", "loc_dorso.1", "loc_columna_lumbar.1", "loc_cara.1", "est_musculo.1", "est_ligamento.1", "est_hueso.1", "est_menisco.1"],
+  "nivells_k3": ["Cluster1", "Cluster2", "Cluster3"],
+  "feature_map": {
+    "seleccion": {
+      "type": "categorical",
+      "levels": ["Femenina", "Masculina"],
+      "level_to_columns": {
+        "Femenina": [],
+        "Masculina": "seleccion.Masculina"
+      }
+    },
+    "edad_anos": {
+      "type": "numeric",
+      "columns": "edad_anos"
+    },
+    "peso_kg": {
+      "type": "numeric",
+      "columns": "peso_kg"
+    },
+    "altura_corporal_cm": {
+      "type": "numeric",
+      "columns": "altura_corporal_cm"
+    },
+    "raza": {
+      "type": "categorical",
+      "levels": ["Africano", "Caucásico/europeo", "Latinoamericano"],
+      "level_to_columns": {
+        "Africano": [],
+        "Caucásico/europeo": "raza.Caucásico.europeo",
+        "Latinoamericano": "raza.Latinoamericano"
+      }
+    },
+    "min_entreno_fisico": {
+      "type": "numeric",
+      "columns": "min_entreno_fisico"
+    },
+    "min_entreno_pista": {
+      "type": "numeric",
+      "columns": "min_entreno_pista"
+    },
+    "x1_partido": {
+      "type": "categorical",
+      "levels": ["0", "1-10'", "10-20'", "20-30'"],
+      "level_to_columns": {
+        "0": [],
+        "1-10'": "x1_partido.1.10.",
+        "10-20'": "x1_partido.10.20.",
+        "20-30'": "x1_partido.20.30."
+      }
+    },
+    "x2_partidos": {
+      "type": "categorical",
+      "levels": ["0", "1-10'", "10-20'", "20-30'"],
+      "level_to_columns": {
+        "0": [],
+        "1-10'": "x2_partidos.1.10.",
+        "10-20'": "x2_partidos.10.20.",
+        "20-30'": "x2_partidos.20.30."
+      }
+    },
+    "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana": {
+      "type": "categorical",
+      "levels": ["1", "10", "2", "3", "4", "5", "6", "7", "8", "9"],
+      "level_to_columns": {
+        "1": [],
+        "10": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.10",
+        "2": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.2",
+        "3": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.3",
+        "4": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.4",
+        "5": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.5",
+        "6": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.6",
+        "7": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.7",
+        "8": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.8",
+        "9": "cual_es_tu_percepcion_de_fatiga_despues_de_la_ultima_competicion_entrenamiento_de_la_semana.9"
+      }
+    },
+    "lesiones_previas": {
+      "type": "categorical",
+      "levels": ["No", "Sí"],
+      "level_to_columns": {
+        "No": [],
+        "Sí": "lesiones_previas.Sí"
+      }
+    },
+    "perc_fatiga": {
+      "type": "numeric",
+      "columns": "perc_fatiga"
+    },
+    "loc_hombro_clavicula": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "loc_hombro_clavicula.1"
+      }
+    },
+    "loc_brazo": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "loc_brazo.1"
+      }
+    },
+    "loc_rodilla": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "loc_rodilla.1"
+      }
+    },
+    "loc_tobillo": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "loc_tobillo.1"
+      }
+    },
+    "loc_dorso": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "loc_dorso.1"
+      }
+    },
+    "loc_columna_lumbar": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "loc_columna_lumbar.1"
+      }
+    },
+    "loc_cara": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "loc_cara.1"
+      }
+    },
+    "est_musculo": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "est_musculo.1"
+      }
+    },
+    "est_ligamento": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "est_ligamento.1"
+      }
+    },
+    "est_hueso": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "est_hueso.1"
+      }
+    },
+    "est_menisco": {
+      "type": "categorical",
+      "levels": ["0", "1"],
+      "level_to_columns": {
+        "0": [],
+        "1": "est_menisco.1"
+      }
+    }
+  }
+}
