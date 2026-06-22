@@ -409,20 +409,15 @@ def crear_grafic_barres_comparacio(dades_radial, cluster_pred, max_variables=14)
 def crear_grafic_diferencies(dades_radial, max_variables=14):
     d = seleccionar_variables_radial(dades_radial, max_variables).copy()
 
-    # Diferència signada:
-    # positiva = observació per sobre de la mitjana del clúster
-    # negativa = observació per sota de la mitjana del clúster
     d["diferencia_signada"] = (
         d["observacio_norm"] - d["mitjana_cluster_norm"]
     )
 
     d = d.sort_values("diferencia_signada")
 
-    # Colors segons la direcció de la diferència
     colors = [
-        "#DC2626" if valor > 0.001       # Vermell: per sobre
-        else "#2563EB" if valor < -0.001 # Blau: per sota
-        else "#9CA3AF"                   # Gris: pràcticament igual
+        "#DC2626" if valor < 0
+        else "#2563EB"
         for valor in d["diferencia_signada"]
     ]
 
@@ -445,30 +440,27 @@ def crear_grafic_diferencies(dades_radial, max_variables=14):
     fig.add_vline(
         x=0,
         line_width=2,
-        line_dash="dash",
         line_color="black"
     )
 
     fig.update_layout(
         title="Diferència respecte a la mitjana del clúster",
-        xaxis_title="Diferència normalitzada: observació − mitjana del clúster",
+        height=420,
         showlegend=False,
-        margin=dict(l=190, r=30, t=65, b=55),
-        annotations=[
-            dict(
-                x=0,
-                y=1.10,
-                xref="paper",
-                yref="paper",
-                text=(
-                    "<span style='color:#2563EB'><b>Blau:</b> per sota de la mitjana</span>"
-                    " · "
-                    "<span style='color:#DC2626'><b>Vermell:</b> per sobre de la mitjana</span>"
-                ),
-                showarrow=False,
-                xanchor="left"
-            )
-        ]
+        margin=dict(
+            l=185,
+            r=20,
+            t=55,
+            b=35
+        ),
+        xaxis=dict(
+            title=None,
+            zeroline=False
+        ),
+        yaxis=dict(
+            title=None,
+            tickfont=dict(size=10)
+        )
     )
 
     return fig
