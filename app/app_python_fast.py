@@ -406,17 +406,72 @@ def crear_grafic_barres_comparacio(dades_radial, cluster_pred, max_variables=14)
     fig.update_xaxes(tickangle=45)
     return fig
 
-
 def crear_grafic_diferencies(dades_radial, max_variables=14):
     d = seleccionar_variables_radial(dades_radial, max_variables).copy()
-    d["diferencia_signada"] = d["observacio_norm"] - d["mitjana_cluster_norm"]
-    d = d.sort_values("diferencia_signada")
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=d["diferencia_signada"], y=d["variable_mostrar"], orientation="h", name="Diferència"))
-    fig.add_vline(x=0, line_width=2, line_dash="dash", line_color="black")
-    fig.update_layout(title="Diferència respecte a la mitjana del clúster", showlegend=False)
-    return fig
 
+    # Diferència signada:
+    # positiva = observació per sobre de la mitjana del clúster
+    # negativa = observació per sota de la mitjana del clúster
+    d["diferencia_signada"] = (
+        d["observacio_norm"] - d["mitjana_cluster_norm"]
+    )
+
+    d = d.sort_values("diferencia_signada")
+
+    # Colors segons la direcció de la diferència
+    colors = [
+        "#DC2626" if valor > 0.001       # Vermell: per sobre
+        else "#2563EB" if valor < -0.001 # Blau: per sota
+        else "#9CA3AF"                   # Gris: pràcticament igual
+        for valor in d["diferencia_signada"]
+    ]
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=d["diferencia_signada"],
+            y=d["variable_mostrar"],
+            orientation="h",
+            marker=dict(color=colors),
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Diferència: %{x:.2f}"
+                "<extra></extra>"
+            )
+        )
+    )
+
+    fig.add_vline(
+        x=0,
+        line_width=2,
+        line_dash="dash",
+        line_color="black"
+    )
+
+    fig.update_layout(
+        title="Diferència respecte a la mitjana del clúster",
+        xaxis_title="Diferència normalitzada: observació − mitjana del clúster",
+        showlegend=False,
+        margin=dict(l=190, r=30, t=65, b=55),
+        annotations=[
+            dict(
+                x=0,
+                y=1.10,
+                xref="paper",
+                yref="paper",
+                text=(
+                    "<span style='color:#2563EB'><b>Blau:</b> per sota de la mitjana</span>"
+                    " · "
+                    "<span style='color:#DC2626'><b>Vermell:</b> per sobre de la mitjana</span>"
+                ),
+                showarrow=False,
+                xanchor="left"
+            )
+        ]
+    )
+
+    return fig
 
 def obtenir_top10_similars(df_input, cluster_pred, reference_train):
     if reference_train.empty or "k3" not in reference_train.columns:
