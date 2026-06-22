@@ -415,11 +415,15 @@ def crear_grafic_diferencies(dades_radial, max_variables=14):
 
     d = d.sort_values("diferencia_signada")
 
-    colors = [
-        "#DC2626" if valor < 0
-        else "#2563EB"
-        for valor in d["diferencia_signada"]
-    ]
+
+colors = [
+    "#DC2626" if valor > 0      # Dreta: vermell
+    else "#2563EB" if valor < 0 # Esquerra: blau
+    else "#9CA3AF"              # Zero: gris
+    for valor in d["diferencia_signada"]
+]
+
+
 
     fig = go.Figure()
 
