@@ -397,74 +397,53 @@ def crear_radial_plot(dades_radial, cluster_pred, max_variables=14):
     return fig
 
 
-def crear_grafic_barres_comparacio(dades_radial, cluster_pred, max_variables=14):
-    d = seleccionar_variables_radial(dades_radial, max_variables)
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=d["variable_mostrar"], y=d["mitjana_cluster_norm"], name=f"Mitjana {cluster_pred}", marker=dict(color="black")))
-    fig.add_trace(go.Bar(x=d["variable_mostrar"], y=d["observacio_norm"], name="Observació", marker=dict(color="white", line=dict(color="black", width=1.5))))
-    fig.update_layout(title="Comparació normalitzada observació vs clúster", yaxis=dict(range=[0, 1]), barmode="group", margin=dict(b=150))
-    fig.update_xaxes(tickangle=45)
-    return fig
-
-def crear_grafic_diferencies(dades_radial, max_variables=14):
+def crear_grafic_diferencies_cluster(dades_radial, cluster_pred, max_variables=14):
     d = seleccionar_variables_radial(dades_radial, max_variables).copy()
 
-    d["diferencia_signada"] = (
-        d["observacio_norm"] - d["mitjana_cluster_norm"]
-    )
+    d["diferencia_signada"] = d["observacio_norm"] - d["mitjana_cluster_norm"]
+    d = d.sort_values("diferencia_signada", ascending=True)
 
-    d = d.sort_values("diferencia_signada")
-
-
-colors = [
-    "#DC2626" if valor > 0      # Dreta: vermell
-    else "#2563EB" if valor < 0 # Esquerra: blau
-    else "#9CA3AF"              # Zero: gris
-    for valor in d["diferencia_signada"]
-]
-
-
+    colors = [
+        "#2563EB" if valor < 0 else "#DC2626" if valor > 0 else "#9CA3AF"
+        for valor in d["diferencia_signada"]
+    ]
 
     fig = go.Figure()
 
-    fig.add_trace(
-        go.Bar(
-            x=d["diferencia_signada"],
-            y=d["variable_mostrar"],
-            orientation="h",
-            marker=dict(color=colors),
-            hovertemplate=(
-                "<b>%{y}</b><br>"
-                "Diferència: %{x:.2f}"
-                "<extra></extra>"
-            )
-        )
-    )
+    fig.add_trace(go.Bar(
+        x=d["diferencia_signada"],
+        y=d["variable_mostrar"],
+        orientation="h",
+        marker=dict(color=colors),
+        showlegend=False,
+        hovertemplate="<b>%{y}</b><br>Diferència: %{x:.2f}<extra></extra>"
+    ))
 
     fig.add_vline(
         x=0,
         line_width=2,
+        line_dash="dash",
         line_color="black"
     )
 
     fig.update_layout(
         title="Diferència respecte a la mitjana del clúster",
-        height=420,
-        showlegend=False,
-        margin=dict(
-            l=185,
-            r=20,
-            t=55,
-            b=35
-        ),
-        xaxis=dict(
-            title=None,
-            zeroline=False
-        ),
-        yaxis=dict(
-            title=None,
-            tickfont=dict(size=10)
-        )
+        xaxis_title=None,
+        yaxis_title=None,
+        margin=dict(l=10, r=10, t=50, b=10),
+        height=max(380, 28 * len(d)),
+        plot_bgcolor="white",
+        paper_bgcolor="white"
+    )
+
+    fig.update_xaxes(
+        zeroline=False,
+        showgrid=False
+    )
+
+    fig.update_yaxes(
+        categoryorder="array",
+        categoryarray=d["variable_mostrar"].tolist()
     )
 
     return fig
